@@ -58,7 +58,7 @@ function train(){
  <div class="card"><span class="badge">Übung ${i+1} / ${PLAN.length}</span><span class="note" style="float:right">💾 automatisch gespeichert</span></div>
  <div class="card"><div class="exercise">${x.name}</div><div class="meta">Ziel: ${x.target} · ${it.reps.length} Sätze</div>
  <label style="display:block;margin-top:14px">Gewicht / Unterstützung<input id="activeWeight" class="input autosave" inputmode="decimal" value="${escapeHtml(it.weight)}"></label>
- <div class="sets">${Array.from({length:x.setsSun},(_,s)=>`<label>Satz ${s+1}<input class="input activeRep autosave" data-s="${s}" type="number" inputmode="numeric" min="0" value="${it.reps[s]||""}"></label>`).join("")}</div></div>
+ <div class="sets">${Array.from({length:it.reps.length},(_,s)=>`<label>Satz ${s+1}<input class="input activeRep autosave" data-s="${s}" type="number" inputmode="numeric" min="0" value="${it.reps[s]||""}"></label>`).join("")}</div></div>
  <div class="actions"><button class="primary" onclick="saveExercise(${i})">${i===PLAN.length-1?"Training abschließen":"Übung speichern →"}</button>${i>0?'<button class="secondary" onclick="previousExercise()">← Vorherige Übung</button>':""}</div>`;
 }
 function escapeHtml(v){return String(v??"").replaceAll("&","&amp;").replaceAll('"',"&quot;").replaceAll("<","&lt;").replaceAll(">","&gt;")}
@@ -99,11 +99,36 @@ function progress(){
  const labels=list.slice(-8).map(w=>`<span>${w.date.slice(0,5)}</span>`).join("");
  return `<header><h2>Fortschritt</h2><div class="sub">Entwicklung über alle Trainings</div></header><div class="statgrid"><div class="stat"><b>${list.length}</b><span>Trainings</span></div><div class="stat"><b>${total}</b><span>Sätze erfasst</span></div><div class="stat"><b>${latest.date}</b><span>Letztes Training</span></div></div><div class="card"><div class="eyebrow">KLIMMZUG-FORTSCHRITT</div><div class="exercise" style="margin-top:5px">Wiederholungen bei 32 kg Unterstützung</div><div class="chart">${bars}</div><div class="chart-labels">${labels}</div></div><div class="section-title">Entwicklung je Übung</div>${cards}`;
 }
+let deferredInstallPrompt=null;
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstallPrompt=e;});
+
+async function checkPwaStatus(){
+ const out=document.getElementById("pwaStatus");if(!out)return;
+ let reg=null;
+ try{reg=await navigator.serviceWorker?.getRegistration();}catch{}
+ let manifestOk=false;
+ try{
+  const link=document.querySelector('link[rel="manifest"]');
+  const res=await fetch(link.href,{cache:"no-store"});
+  const m=await res.json();
+  manifestOk=!!(m.name&&m.start_url&&m.display==="standalone"&&Array.isArray(m.icons)&&m.icons.length>=2);
+ }catch{}
+ const rows=[
+  ["Manifest",manifestOk],
+  ["Service Worker registriert",!!reg],
+  ["Service Worker aktiv",!!reg?.active],
+  ["Seite wird kontrolliert",!!navigator.serviceWorker?.controller],
+  ["Chrome stellt Installation bereit",!!deferredInstallPrompt]
+ ];
+ out.innerHTML=rows.map(([n,ok])=>`<div class="list-item"><span>${n}</span><b>${ok?"✅":"❌"}</b></div>`).join("")+
+  `<div class="note" style="margin-top:10px">Wenn hier ein ❌ steht, wissen wir genau, wo wir weitermachen müssen.</div>`;
+}
 function more(){
  const g=activeGoal();
  return `<header><h2>Mehr</h2><div class="sub">Ziele, Planversionen und Daten</div></header>
  <div class="card"><div class="eyebrow">AKTIVES ZIEL</div><div class="list-item"><div><b>${g.name}</b><div class="meta">${g.current} · nächster Meilenstein ${g.next}</div></div><span class="badge active">AKTIV</span></div><div class="actions"><button class="secondary" onclick="editGoal()">Ziel bearbeiten</button></div></div>
  <div class="card"><div class="eyebrow">TRAININGSPLÄNE</div>${plans.map(p=>`<div class="list-item"><div><b>${p.name}</b><div class="meta">${p.from}${p.to?" – "+p.to:" · heute"}</div></div><span class="badge ${p.active?"active":""}">${p.active?"AKTIV":"ARCHIV"}</span></div>`).join("")}</div>
+ <div class="card"><div class="eyebrow">PWA-DIAGNOSE</div><div id="pwaStatus"><div class="note">Status wird geprüft…</div></div><div class="actions"><button class="secondary" onclick="checkPwaStatus()">Status erneut prüfen</button></div></div>
  <div class="card info"><b>Datenschutz & Daten</b><div class="note" style="margin-top:6px">Deine Trainingsdaten liegen lokal auf deinem Gerät. Es gibt keinen Login und keine externe Analyse.</div></div>`;
 }
 function editGoal(){
@@ -113,4 +138,6 @@ function editGoal(){
 window.addEventListener("hashchange",render);
 if(!location.hash)location.hash="home";
 render();
-if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js?v=4",{scope:"./"}).catch(()=>{});
+if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js?v=5",{scope:"./"}).catch(()=>{});
+window.addEventListener("load",()=>{if(route()==="more")checkPwaStatus();});
+window.addEventListener("hashchange",()=>{if(route()==="more")setTimeout(checkPwaStatus,0);});
