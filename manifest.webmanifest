@@ -1,16 +1,18 @@
 {
   "name":"Fitness Trainingstagebuch",
   "short_name":"Fitness",
-  "id":"./",
-  "start_url":"./",
-  "scope":"./",
+  "id":"/Trainings_Dashboard2.0/",
+  "start_url":"/Trainings_Dashboard2.0/",
+  "scope":"/Trainings_Dashboard2.0/",
+  "lang":"de-DE",
   "display":"standalone",
-  "display_override":["window-controls-overlay","standalone"],
+  "display_override":["standalone"],
+  "prefer_related_applications":false,
   "background_color":"#0b1016",
   "theme_color":"#0b1016",
   "description":"Persönliches Trainingstagebuch",
   "icons":[
-    {"src":"./icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
-    {"src":"./icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+    {"src":"/Trainings_Dashboard2.0/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},
+    {"src":"/Trainings_Dashboard2.0/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"}
   ]
 }
