@@ -1,9 +1,9 @@
 {
   "name":"Fitness Trainingstagebuch",
   "short_name":"Fitness",
-  "id":"/Trainings_Dashboard2.0/",
-  "start_url":"/Trainings_Dashboard2.0/",
-  "scope":"/Trainings_Dashboard2.0/",
+  "id":"./",
+  "start_url":"./",
+  "scope":"./",
   "lang":"de-DE",
   "display":"standalone",
   "display_override":["standalone"],
@@ -12,7 +12,7 @@
   "theme_color":"#0b1016",
   "description":"Persönliches Trainingstagebuch",
   "icons":[
-    {"src":"/Trainings_Dashboard2.0/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},
-    {"src":"/Trainings_Dashboard2.0/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"}
+    {"src":"./icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},
+    {"src":"./icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"}
   ]
 }
