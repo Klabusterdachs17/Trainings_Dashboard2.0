@@ -100,8 +100,18 @@ function progress(){
  return `<header><h2>Fortschritt</h2><div class="sub">Entwicklung über alle Trainings</div></header><div class="statgrid"><div class="stat"><b>${list.length}</b><span>Trainings</span></div><div class="stat"><b>${total}</b><span>Sätze erfasst</span></div><div class="stat"><b>${latest.date}</b><span>Letztes Training</span></div></div><div class="card"><div class="eyebrow">KLIMMZUG-FORTSCHRITT</div><div class="exercise" style="margin-top:5px">Wiederholungen bei 32 kg Unterstützung</div><div class="chart">${bars}</div><div class="chart-labels">${labels}</div></div><div class="section-title">Entwicklung je Übung</div>${cards}`;
 }
 let deferredInstallPrompt=null;
-window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstallPrompt=e;});
+window.addEventListener("beforeinstallprompt",e=>{
+ e.preventDefault();deferredInstallPrompt=e;
+ const b=document.getElementById("installAppBtn");if(b){b.disabled=false;b.textContent="Fitness installieren";}
+});
 
+async function installApp(){
+ if(!deferredInstallPrompt){alert("Chrome stellt für diese Seite gerade keine Installation bereit.");return}
+ deferredInstallPrompt.prompt();
+ await deferredInstallPrompt.userChoice;
+ deferredInstallPrompt=null;
+ const b=document.getElementById("installAppBtn");if(b){b.disabled=true;b.textContent="Bereits installiert / nicht verfügbar";}
+}
 async function checkPwaStatus(){
  const out=document.getElementById("pwaStatus");if(!out)return;
  let reg=null;
@@ -128,6 +138,7 @@ function more(){
  return `<header><h2>Mehr</h2><div class="sub">Ziele, Planversionen und Daten</div></header>
  <div class="card"><div class="eyebrow">AKTIVES ZIEL</div><div class="list-item"><div><b>${g.name}</b><div class="meta">${g.current} · nächster Meilenstein ${g.next}</div></div><span class="badge active">AKTIV</span></div><div class="actions"><button class="secondary" onclick="editGoal()">Ziel bearbeiten</button></div></div>
  <div class="card"><div class="eyebrow">TRAININGSPLÄNE</div>${plans.map(p=>`<div class="list-item"><div><b>${p.name}</b><div class="meta">${p.from}${p.to?" – "+p.to:" · heute"}</div></div><span class="badge ${p.active?"active":""}">${p.active?"AKTIV":"ARCHIV"}</span></div>`).join("")}</div>
+ <div class="card"><div class="eyebrow">APP-INSTALLATION</div><div class="actions"><button id="installAppBtn" class="primary" disabled onclick="installApp()">Installation wird geprüft…</button></div><div class="note">Wenn Chrome die Installation freigibt, kannst du sie hier direkt starten.</div></div>
  <div class="card"><div class="eyebrow">PWA-DIAGNOSE</div><div id="pwaStatus"><div class="note">Status wird geprüft…</div></div><div class="actions"><button class="secondary" onclick="checkPwaStatus()">Status erneut prüfen</button></div></div>
  <div class="card info"><b>Datenschutz & Daten</b><div class="note" style="margin-top:6px">Deine Trainingsdaten liegen lokal auf deinem Gerät. Es gibt keinen Login und keine externe Analyse.</div></div>`;
 }
