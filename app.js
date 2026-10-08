@@ -113,4 +113,4 @@ function editGoal(){
 window.addEventListener("hashchange",render);
 if(!location.hash)location.hash="home";
 render();
-if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js",{scope:"./"}).catch(()=>{});
+if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js?v=4",{scope:"./"}).catch(()=>{});
