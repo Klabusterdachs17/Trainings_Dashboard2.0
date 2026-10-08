@@ -1,0 +1,10 @@
+{
+  "name": "Fitness Trainingstagebuch",
+  "short_name": "Fitness",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#090d12",
+  "theme_color": "#090d12",
+  "description": "Persönliches Trainingstagebuch"
+}
