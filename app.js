@@ -37,7 +37,7 @@ function today(){return new Date().toLocaleDateString("de-DE")}
 function route(){return location.hash.slice(1)||"home"} function nav(r){location.hash=r}
 function activeGoal(){return goals.find(g=>g.status==="active")||goals[0]}
 function activePlan(){return plans.find(p=>p.active)||plans.at(-1)}
-function setsFor(ex){return location.day==="wed"?ex.setsWed:ex.setsSun}
+function todaySetCount(ex){return new Date().getDay()===3?ex.setsWed:ex.setsSun}
 function render(){document.getElementById("app").innerHTML=view(route());document.querySelectorAll(".bottom-nav button").forEach(b=>{b.classList.toggle("active",b.dataset.route===route());b.onclick=()=>nav(b.dataset.route)});bindAutoSave()}
 function view(r){if(r==="home")return home();if(r==="train")return train();if(r==="history")return historyView();if(r==="progress")return progress();return more()}
 function home(){
@@ -48,7 +48,7 @@ function home(){
  <div class="actions"><button class="primary" onclick="startTraining()">▶ Neues Training starten</button></div>`;
 }
 function freshDraft(){
- return {id:Date.now().toString(),planId:PLAN_ID,date:today(),current:0,items:PLAN.map(x=>({exerciseId:x.id,weight:x.weight,reps:Array(x.setsSun).fill("")}))};
+ return {id:Date.now().toString(),planId:PLAN_ID,date:today(),current:0,items:PLAN.map(x=>({exerciseId:x.id,weight:x.weight,reps:Array(todaySetCount(x)).fill("")}))};
 }
 function startTraining(){draft=get("fitness.draft",null)||freshDraft();put("fitness.draft",draft);nav("train")}
 function ensureDraft(){if(!draft)draft=get("fitness.draft",null)||freshDraft();return draft}
@@ -56,7 +56,7 @@ function train(){
  const d=ensureDraft(),i=Math.min(d.current,PLAN.length-1),x=PLAN[i],it=d.items[i],done=d.items.filter(a=>a.reps.some(Boolean)).length;
  return `<button class="back" onclick="nav('home')">← Zurück</button><header><h2>Training</h2><div class="sub">${done} von ${PLAN.length} Übungen begonnen · ${d.date}</div></header>
  <div class="card"><span class="badge">Übung ${i+1} / ${PLAN.length}</span><span class="note" style="float:right">💾 automatisch gespeichert</span></div>
- <div class="card"><div class="exercise">${x.name}</div><div class="meta">Ziel: ${x.target} · ${x.setsSun} Sätze</div>
+ <div class="card"><div class="exercise">${x.name}</div><div class="meta">Ziel: ${x.target} · ${it.reps.length} Sätze</div>
  <label style="display:block;margin-top:14px">Gewicht / Unterstützung<input id="activeWeight" class="input autosave" inputmode="decimal" value="${escapeHtml(it.weight)}"></label>
  <div class="sets">${Array.from({length:x.setsSun},(_,s)=>`<label>Satz ${s+1}<input class="input activeRep autosave" data-s="${s}" type="number" inputmode="numeric" min="0" value="${it.reps[s]||""}"></label>`).join("")}</div></div>
  <div class="actions"><button class="primary" onclick="saveExercise(${i})">${i===PLAN.length-1?"Training abschließen":"Übung speichern →"}</button>${i>0?'<button class="secondary" onclick="previousExercise()">← Vorherige Übung</button>':""}</div>`;
