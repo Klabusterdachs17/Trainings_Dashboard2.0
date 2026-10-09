@@ -145,3 +145,7 @@ h3{font-size:15px;margin:0;font-weight:800}
  .training-summary .training-progress-track{grid-row:2}
  .exercise-card-actions .mini-button{flex:1}
 }
+
+.progress-weight-comparison{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0 2px;padding:10px;border-radius:10px;background:#101720;border:1px solid #293644}
+.progress-weight-comparison>div{display:flex;flex-direction:column;gap:4px}
+.progress-weight-comparison b{font-size:13px}
