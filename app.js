@@ -99,47 +99,38 @@ function progress(){
  const labels=list.slice(-8).map(w=>`<span>${w.date.slice(0,5)}</span>`).join("");
  return `<header><h2>Fortschritt</h2><div class="sub">Entwicklung über alle Trainings</div></header><div class="statgrid"><div class="stat"><b>${list.length}</b><span>Trainings</span></div><div class="stat"><b>${total}</b><span>Sätze erfasst</span></div><div class="stat"><b>${latest.date}</b><span>Letztes Training</span></div></div><div class="card"><div class="eyebrow">KLIMMZUG-FORTSCHRITT</div><div class="exercise" style="margin-top:5px">Wiederholungen bei 32 kg Unterstützung</div><div class="chart">${bars}</div><div class="chart-labels">${labels}</div></div><div class="section-title">Entwicklung je Übung</div>${cards}`;
 }
-let deferredInstallPrompt=null;
-window.addEventListener("beforeinstallprompt",e=>{
- e.preventDefault();deferredInstallPrompt=e;
- const b=document.getElementById("installAppBtn");if(b){b.disabled=false;b.textContent="Fitness installieren";}
-});
-
-async function installApp(){
- if(!deferredInstallPrompt){alert("Chrome stellt für diese Seite gerade keine Installation bereit.");return}
- deferredInstallPrompt.prompt();
- await deferredInstallPrompt.userChoice;
- deferredInstallPrompt=null;
- const b=document.getElementById("installAppBtn");if(b){b.disabled=true;b.textContent="Bereits installiert / nicht verfügbar";}
+function createTestPlan(){
+ plans=get("fitness.plans",DEFAULT_PLANS);
+ const count=plans.filter(p=>String(p.id).startsWith("test-plan-")).length;
+ const suffix=count ? " " + (count+1) : "";
+ const testPlan={
+  id:"test-plan-"+Date.now(),
+  name:"Test-Trainingsplan"+suffix,
+  from:today(),
+  to:null,
+  active:false,
+  exercises:PLAN.map(ex=>({...ex}))
+ };
+ plans.push(testPlan);
+ put("fitness.plans",plans);
+ render();
 }
-async function checkPwaStatus(){
- const out=document.getElementById("pwaStatus");if(!out)return;
- let reg=null;
- try{reg=await navigator.serviceWorker?.getRegistration();}catch{}
- let manifestOk=false;
- try{
-  const link=document.querySelector('link[rel="manifest"]');
-  const res=await fetch(link.href,{cache:"no-store"});
-  const m=await res.json();
-  manifestOk=!!(m.name&&m.start_url&&m.display==="standalone"&&Array.isArray(m.icons)&&m.icons.length>=2);
- }catch{}
- const rows=[
-  ["Manifest",manifestOk],
-  ["Service Worker registriert",!!reg],
-  ["Service Worker aktiv",!!reg?.active],
-  ["Seite wird kontrolliert",!!navigator.serviceWorker?.controller],
-  ["Chrome stellt Installation bereit",!!deferredInstallPrompt]
- ];
- out.innerHTML=rows.map(([n,ok])=>`<div class="list-item"><span>${n}</span><b>${ok?"✅":"❌"}</b></div>`).join("")+
-  `<div class="note" style="margin-top:10px">Wenn hier ein ❌ steht, wissen wir genau, wo wir weitermachen müssen.</div>`;
+function deleteTestPlan(id){
+ const p=plans.find(x=>x.id===id);
+ if(!p||!String(p.id).startsWith("test-plan-")||p.active){
+  alert("Es können nur inaktive Test-Trainingspläne gelöscht werden.");
+  return;
+ }
+ if(!confirm("„"+p.name+"“ wirklich löschen? Dieser Schritt kann nicht rückgängig gemacht werden."))return;
+ plans=plans.filter(x=>x.id!==id);
+ put("fitness.plans",plans);
+ render();
 }
 function more(){
  const g=activeGoal();
  return `<header><h2>Mehr</h2><div class="sub">Ziele, Planversionen und Daten</div></header>
  <div class="card"><div class="eyebrow">AKTIVES ZIEL</div><div class="list-item"><div><b>${g.name}</b><div class="meta">${g.current} · nächster Meilenstein ${g.next}</div></div><span class="badge active">AKTIV</span></div><div class="actions"><button class="secondary" onclick="editGoal()">Ziel bearbeiten</button></div></div>
- <div class="card"><div class="eyebrow">TRAININGSPLÄNE</div>${plans.map(p=>`<div class="list-item"><div><b>${p.name}</b><div class="meta">${p.from}${p.to?" – "+p.to:" · heute"}</div></div><span class="badge ${p.active?"active":""}">${p.active?"AKTIV":"ARCHIV"}</span></div>`).join("")}</div>
- <div class="card"><div class="eyebrow">APP-INSTALLATION</div><div class="actions"><button id="installAppBtn" class="primary" disabled onclick="installApp()">Installation wird geprüft…</button></div><div class="note">Wenn Chrome die Installation freigibt, kannst du sie hier direkt starten.</div></div>
- <div class="card"><div class="eyebrow">PWA-DIAGNOSE</div><div id="pwaStatus"><div class="note">Status wird geprüft…</div></div><div class="actions"><button class="secondary" onclick="checkPwaStatus()">Status erneut prüfen</button></div></div>
+ <div class="card"><div class="eyebrow">TRAININGSPLÄNE</div>${plans.map(p=>`<div class="list-item"><div><b>${escapeHtml(p.name)}</b><div class="meta">${escapeHtml(p.from)}${p.to?" – "+escapeHtml(p.to):" · heute"}${p.exercises?.length?` · ${p.exercises.length} Übungen`:""}</div></div><div class="toolbar"><span class="badge ${p.active?"active":""}">${p.active?"AKTIV":"ARCHIV"}</span>${String(p.id).startsWith("test-plan-")?`<button class="danger" style="padding:7px 9px;font-size:12px" onclick="deleteTestPlan(&quot;${p.id}&quot;)">Löschen</button>`:""}</div></div>`).join("")}<div class="actions"><button class="secondary" onclick="createTestPlan()">+ Test-Trainingsplan anlegen</button></div><div class="note">Der Testplan enthält eine Kopie der aktuellen Übungsliste und bleibt inaktiv. Dein aktueller Trainingsablauf und deine gespeicherten Trainings bleiben unverändert.</div></div>
  <div class="card info"><b>Datenschutz & Daten</b><div class="note" style="margin-top:6px">Deine Trainingsdaten liegen lokal auf deinem Gerät. Es gibt keinen Login und keine externe Analyse.</div></div>`;
 }
 function editGoal(){
@@ -149,6 +140,5 @@ function editGoal(){
 window.addEventListener("hashchange",render);
 if(!location.hash)location.hash="home";
 render();
-if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js?v=7",{scope:"./"}).catch(()=>{});
-window.addEventListener("load",()=>{if(route()==="more")checkPwaStatus();});
-window.addEventListener("hashchange",()=>{if(route()==="more")setTimeout(checkPwaStatus,0);});
+if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js?v=8",{scope:"./"}).catch(()=>{});
+
