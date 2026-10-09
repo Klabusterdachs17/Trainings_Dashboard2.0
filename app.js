@@ -50,7 +50,7 @@ function normalizeDraftRecord(raw) {
  const items=raw.items.map((item,i)=>{
   const source=normalizeWorkoutItem(item,i,snap);
   const ex=sourceExercises.find(e=>e.id===source.exerciseId)||sourceExercises.find(e=>e.name===source.name);
-  if(ex){source.kind=ex.kind;source.minReps=ex.minReps;source.maxReps=ex.maxReps;source.increaseStep=ex.increaseStep;source.decreaseStep=ex.decreaseStep;source.failuresBeforeDecrease=ex.failuresBeforeDecrease;source.name=source.name||ex.name;}
+  if(ex){source.kind=ex.kind;source.minReps=ex.minReps;source.maxReps=ex.maxReps;source.increaseStep=ex.increaseStep;source.decreaseStep=ex.decreaseStep;source.failuresBeforeDecrease=ex.failuresBeforeDecrease;source.name=(!item.name||item.name==="Übung")?ex.name:source.name;}
   if(!source.reps.length)source.reps=Array(todaySetCount(ex||{setsSun:3,setsWed:3})).fill("");
   if(!source.weight&&ex)source.weight=ex.weight||"";
   if(!source.done&&!source.skipped)source.done=source.reps.some(v=>String(v).trim()!=="");
@@ -88,7 +88,7 @@ function exerciseHistory(exercise) {
 }
 function getSuggestion(exercise) {
  if(exercise.kind==="bodyweight")return null;
- const history=exerciseHistory(exercise).filter(x=>x.fullyLogged);if(!history.length)return null;
+ const history=exerciseHistory(exercise).filter(x=>x.fullyLogged&&x.item.done);if(!history.length)return null;
  const latest=history[0],weight=parseWeight(latest.weight);if(weight===null)return null;
  const allAtTop=latest.reps.length>0&&latest.reps.every(v=>v>=exercise.maxReps);
  const failed=e=>e.reps.length>0&&e.reps.some(v=>v<exercise.minReps);
@@ -127,12 +127,13 @@ function train(){
  out+='<label class="field-label">Tatsächliches Gewicht / Unterstützung<input class="input workout-input" data-index="'+i+'" data-field="weight" value="'+esc(it.weight)+'" '+(it.skipped?"disabled":"")+' placeholder="z. B. 22,5 kg"></label><div class="sets-grid">';
  it.reps.forEach((rep,s)=>{out+='<label class="field-label">Satz '+(s+1)+'<input class="input workout-input rep-input" data-index="'+i+'" data-rep-index="'+s+'" data-field="rep" type="number" min="0" inputmode="numeric" value="'+esc(rep)+'" '+(it.skipped?"disabled":"")+' placeholder="Wdh."></label>';});
  out+='</div><div class="exercise-card-actions"><button class="mini-button '+(it.done?"mini-done":"")+'" data-action="toggle-done" data-index="'+i+'" '+(it.skipped?"disabled":"")+'>'+(it.done?"✓ Erledigt":"✓ Fertig")+'</button><button class="mini-button '+(it.skipped?"mini-skipped":"")+'" data-action="toggle-skipped" data-index="'+i+'">'+(it.skipped?"Überspringen rückgängig":"Übung überspringen")+'</button>';
- if(it.suggestionWeight)out+='<button class="mini-button" data-action="accept-suggestion" data-index="'+i+'">Vorschlag übernehmen</button>';
+ out+='<button class="mini-button" data-action="save-weight-default" data-index="'+i+'">Als Planstandard speichern</button>';if(it.suggestionWeight)out+='<button class="mini-button" data-action="accept-suggestion" data-index="'+i+'">Vorschlag übernehmen</button>';
  out+='</div></section>';});
  out+='<div class="actions finish-actions"><button class="primary full-width" data-action="finish-workout">Training abschließen</button><div class="note">Nicht markierte Übungen können als teilweise absolvierte Einheit gespeichert werden. Übersprungene Übungen werden nicht als Fehler gewertet.</div></div></div>';return out;
 }
 function syncDraftFromDom(){if(!draft||route()!=="train")return;document.querySelectorAll(".workout-input").forEach(el=>{const i=Number(el.dataset.index);if(!draft.items[i])return;if(el.dataset.field==="weight")draft.items[i].weight=el.value;if(el.dataset.field==="rep")draft.items[i].reps[Number(el.dataset.repIndex)]=el.value;});put("fitness.draft",draft)}
 function finishWorkout(){syncDraftFromDom();if(!draft||!draft.items.length){alert("Es gibt keine Trainingseinheit zum Speichern.");return;}const open=draft.items.filter(x=>!x.done&&!x.skipped);if(open.length&&!confirm(open.length+" Übung(en) sind noch nicht als erledigt markiert. Möchtest du die Einheit trotzdem als teilweise absolviert speichern?"))return;const w={id:uid("workout"),date:draft.date,planId:draft.planId,planName:draft.planName,planSnapshot:deepCopy(draft.planSnapshot),items:draft.items.map(x=>deepCopy(x))};workouts=get("fitness.workouts",SEED);workouts.unshift(w);if(!put("fitness.workouts",workouts))return;localStorage.removeItem("fitness.draft");draft=null;nav("history")}
+function saveWeightAsDefault(index){syncDraftFromDom();const item=draft&&draft.items[index];if(!item||item.skipped)return;const p=plans.find(x=>x.id===draft.planId);if(!p)return;const ex=p.exercises.find(x=>x.id===item.exerciseId)||p.exercises.find(x=>x.name===item.name);if(!ex){alert("Die Übung wurde im Trainingsplan nicht gefunden.");return;}if(!item.weight.trim()){alert("Bitte trage zuerst ein Gewicht ein.");return;}if(!confirm("Das Gewicht „"+item.weight+"“ als Planstandard für „"+item.name+"“ übernehmen?"))return;ex.weight=item.weight.trim();if(draft.planSnapshot){const snap=draft.planSnapshot.exercises.find(x=>x.id===ex.id)||draft.planSnapshot.exercises.find(x=>x.name===ex.name);if(snap)snap.weight=ex.weight;}setPlans();put("fitness.draft",draft);alert("Standardgewicht im Trainingsplan aktualisiert.");render()}
 function discardDraft(){if(!confirm("Die laufende Trainingseinheit wirklich verwerfen? Die bereits eingegebenen Werte gehen verloren."))return;localStorage.removeItem("fitness.draft");draft=null;nav("home")}
 function historyView(){
  const list=sortedWorkouts();let out='<div class="app"><header><h2>Trainingshistorie</h2><div class="sub">Deine absolvierten Einheiten – Fehler lassen sich nachträglich korrigieren.</div></header>';
@@ -172,7 +173,7 @@ function progress(){
 function more(){
  let out='<div class="app"><header><h2>Mehr</h2><div class="sub">Trainingspläne, Ziele und deine Daten verwalten.</div></header><section class="card management-card"><div class="section-head"><div><div class="eyebrow">TRAININGSPLÄNE</div><h3>Deine Pläne</h3></div><button class="primary small-primary" data-action="new-plan">+ Neuer Plan</button></div>';
  plans.forEach(p=>{const linked=workouts.some(w=>String(w.planId)===String(p.id));out+='<div class="manage-row"><div class="manage-main"><b>'+esc(p.name)+'</b><span class="meta">'+p.exercises.length+' Übungen'+(p.active?" · Aktiver Plan":(p.archived?" · Archiviert":" · Inaktiv"))+'</span></div><div class="manage-actions">';
- if(!p.active&&!p.archived)out+='<button class="mini-button" data-action="activate-plan" data-id="'+esc(p.id)+'">Aktivieren</button>';out+='<button class="mini-button" data-action="edit-plan" data-id="'+esc(p.id)+'">Bearbeiten</button>';
+ if(!p.active)out+='<button class="mini-button" data-action="activate-plan" data-id="'+esc(p.id)+'">'+(p.archived?"Reaktivieren":"Aktivieren")+'</button>';out+='<button class="mini-button" data-action="edit-plan" data-id="'+esc(p.id)+'">Bearbeiten</button>';
  if(!p.active&&!p.archived)out+='<button class="mini-button" data-action="archive-plan" data-id="'+esc(p.id)+'">Archivieren</button>';
  if(p.archived&&!linked)out+='<button class="mini-button danger-text" data-action="delete-plan" data-id="'+esc(p.id)+'">Löschen</button>';
  if(!p.active&&!linked&&!p.archived)out+='<button class="mini-button danger-text" data-action="delete-plan" data-id="'+esc(p.id)+'">Löschen</button>';
@@ -204,7 +205,7 @@ function savePlan(){
 function addPlanExercise(){capturePlanForm();planDraft.exercises.push(makeBlankExercise());render()}
 function removePlanExercise(i){capturePlanForm();if(planDraft.exercises.length<=1){alert("Ein Plan muss mindestens eine Übung enthalten. Du kannst die Übung stattdessen ersetzen.");return;}planDraft.exercises.splice(i,1);render()}
 function movePlanExercise(i,delta){capturePlanForm();const n=i+delta;if(n<0||n>=planDraft.exercises.length)return;[planDraft.exercises[i],planDraft.exercises[n]]=[planDraft.exercises[n],planDraft.exercises[i]];render()}
-function activatePlan(id){const target=plans.find(p=>p.id===id);if(!target||target.archived)return;plans=plans.map(p=>Object.assign({},p,{active:p.id===id,archived:p.id===id?false:p.archived}));setPlans();render()}
+function activatePlan(id){const target=plans.find(p=>p.id===id);if(!target)return;plans=plans.map(p=>Object.assign({},p,{active:p.id===id,archived:p.id===id?false:p.archived}));setPlans();render()}
 function archivePlan(id){const p=plans.find(x=>x.id===id);if(!p||p.active){alert("Der aktive Plan kann nicht archiviert werden. Aktiviere zuerst einen anderen Plan.");return;}if(!confirm("Plan „"+p.name+"“ archivieren? Historische Trainingseinheiten bleiben erhalten."))return;plans=plans.map(x=>x.id===id?Object.assign({},x,{archived:true,active:false}):x);setPlans();render()}
 function deletePlan(id){const p=plans.find(x=>x.id===id);if(!p||p.active)return;if(workouts.some(w=>String(w.planId)===String(id))){alert("Dieser Plan wird in der Historie verwendet. Archiviere ihn stattdessen, damit die Trainingshistorie nachvollziehbar bleibt.");return;}if(!confirm("Plan „"+p.name+"“ endgültig löschen?"))return;plans=plans.filter(x=>x.id!==id);setPlans();render()}
 function newGoal(){goalDraft={id:uid("goal"),name:"Neues Ziel",status:"active",created:today(),current:"",next:"",roadmap:[]};nav("goal-edit")}
@@ -235,6 +236,7 @@ function handleAction(b){
  else if(a==="toggle-skipped"){syncDraftFromDom();const x=draft&&draft.items[i];if(x){x.skipped=!x.skipped;if(x.skipped)x.done=false;put("fitness.draft",draft);render();}}
  else if(a==="move-exercise-up"||a==="move-exercise-down"){syncDraftFromDom();const n=i+(a==="move-exercise-up"?-1:1);if(draft&&n>=0&&n<draft.items.length){[draft.items[i],draft.items[n]]=[draft.items[n],draft.items[i]];put("fitness.draft",draft);render();}}
  else if(a==="accept-suggestion"){syncDraftFromDom();if(draft&&draft.items[i]&&draft.items[i].suggestionWeight){draft.items[i].weight=draft.items[i].suggestionWeight;put("fitness.draft",draft);render();}}
+ else if(a==="save-weight-default")saveWeightAsDefault(i)
  else if(a==="edit-workout"){editingWorkoutId=id;nav("history-edit");}else if(a==="delete-workout")deleteWorkout(id);else if(a==="save-history-edit")saveHistoryEdit(id);else if(a==="go-history")nav("history");
  else if(a==="new-plan")newPlan();else if(a==="edit-plan")editPlan(id);else if(a==="activate-plan")activatePlan(id);else if(a==="archive-plan")archivePlan(id);else if(a==="delete-plan")deletePlan(id);else if(a==="add-plan-exercise")addPlanExercise();else if(a==="remove-plan-exercise")removePlanExercise(i);else if(a==="plan-ex-up")movePlanExercise(i,-1);else if(a==="plan-ex-down")movePlanExercise(i,1);else if(a==="save-plan")savePlan();
  else if(a==="go-more"){planDraft=null;goalDraft=null;nav("more");}else if(a==="new-goal")newGoal();else if(a==="edit-goal")editGoal(id);else if(a==="edit-active-goal"){const g=activeGoal();if(g)editGoal(g.id);else newGoal();}else if(a==="save-goal")saveGoal();else if(a==="activate-goal")activateGoal(id);else if(a==="complete-goal")completeGoal(id);else if(a==="go-goals"||a==="go-plans")nav("more");else if(a==="export-json")exportJSON();
