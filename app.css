@@ -1,28 +1,147 @@
-*{box-sizing:border-box}
-html,body{margin:0;background:#0b1016;color:#f4f6f8;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-body{min-height:100vh;padding-bottom:82px;overflow-x:hidden}.app{max-width:620px;margin:auto;padding:14px 14px 28px}
-header{padding:8px 3px 14px}h1{font-size:29px;margin:0 0 4px}h2{font-size:23px;margin:0 0 4px}.sub,.meta,.note{color:#9aa5b2;font-size:13px}
-.card{background:#151c25;border:1px solid #27313d;border-radius:18px;padding:16px;margin:10px 0}.hero{background:linear-gradient(145deg,#18212c,#10161e)}
-.eyebrow{font-size:11px;font-weight:800;letter-spacing:.08em;color:#9aa5b2}.goal{font-size:25px;font-weight:850;margin:5px 0 14px}
-.current{display:flex;justify-content:space-between;gap:14px;align-items:end}.current strong{font-size:25px}.current span{color:#9aa5b2;font-size:12px}
-.section-title{font-size:16px;font-weight:800;margin:20px 3px 8px}.plan-row{display:grid;grid-template-columns:32px 1fr auto;gap:10px;align-items:center}
-.num{width:30px;height:30px;border-radius:10px;background:#252e39;display:grid;place-items:center;font-size:13px;font-weight:800}.exercise{font-size:15px;font-weight:800}.weight{font-size:12px;color:#d3d8df;margin-top:2px}.target{text-align:right;font-size:12px;font-weight:750}
-.schedule{font-size:11px;color:#9aa5b2;margin-top:3px}.actions{display:grid;gap:9px;margin-top:16px}
-button{border:0;border-radius:14px;padding:14px 16px;font-size:15px;font-weight:750;cursor:pointer}.primary{background:#f4f6f8;color:#0b1016}.secondary{background:#151c25;color:#f4f6f8;border:1px solid #34404d}.danger{background:#26181b;color:#ffb9c0;border:1px solid #5a2930}.back{background:transparent;color:#9aa5b2;padding:7px 0}
-.roadmap{margin-top:17px;position:relative}.roadmap:before{content:"";position:absolute;left:13px;top:14px;bottom:14px;width:2px;background:#303b48}
-.step{display:flex;gap:12px;position:relative;padding:7px 0}.dot{width:28px;height:28px;border-radius:50%;background:#202833;border:2px solid #3b4653;display:grid;place-items:center;font-size:11px;z-index:1}
-.step.active .dot{background:#f4f6f8;color:#0b1016;border-color:#f4f6f8;font-weight:900}.step.done .dot{background:#313d4b;color:#fff}.step b{font-size:13px}.step small{display:block;color:#9aa5b2;font-size:11px;margin-top:1px}
-.badge{font-size:10px;padding:5px 8px;border-radius:9px;background:#252e39;color:#d9dee5;white-space:nowrap}.badge.active{background:#eef1f4;color:#10151b}
-.bottom-nav{position:fixed;z-index:20;bottom:0;left:0;right:0;height:74px;background:#0d131beF;border-top:1px solid #27313d;backdrop-filter:blur(14px);display:grid;grid-template-columns:repeat(5,1fr);padding-bottom:env(safe-area-inset-bottom)}
-.bottom-nav button{background:transparent;color:#87929f;border-radius:0;padding:7px 2px;font-size:20px}.bottom-nav button span{display:block;font-size:10px;margin-top:2px}.bottom-nav button.active{color:#f4f6f8}
-.statgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.stat{background:#151c25;border:1px solid #27313d;border-radius:16px;padding:14px}.stat b{font-size:22px}.stat span{display:block;color:#9aa5b2;font-size:11px;margin-top:3px}
-.progress-card{background:#151c25;border:1px solid #27313d;border-radius:18px;padding:15px;margin:10px 0}.pc-head{display:flex;justify-content:space-between;gap:10px}.pc-best{font-size:23px;font-weight:850}.pc-best small{font-size:10px;color:#9aa5b2}.progressbar{height:8px;background:#2b3541;border-radius:8px;overflow:hidden;margin:12px 0}.progressbar>div{height:100%;background:#d9dee4}.pc-stats{display:grid;grid-template-columns:1fr 1fr;gap:9px}.pc-stats span{display:block;color:#9aa5b2;font-size:11px}.pc-stats b{font-size:13px}
-.input{width:100%;padding:12px;background:#0e141c;color:#f4f6f8;border:1px solid #394553;border-radius:11px;font-size:17px;margin-top:5px}.sets{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:11px}
-label{font-size:11px;color:#9aa5b2}.activeRep{font-size:20px;text-align:center;font-weight:750;padding:13px}.activeRep:focus,.input:focus{outline:2px solid #8994a2;outline-offset:1px}
-.exercise-head,.list-item{display:flex;justify-content:space-between;gap:12px;align-items:center}.list-item{padding:12px 0;border-bottom:1px solid #29333f}.list-item:last-child{border-bottom:0}
-table{width:100%;border-collapse:collapse;font-size:12px}th,td{text-align:left;padding:9px 4px;border-bottom:1px solid #2a3440}th{color:#9aa5b2}.info{background:#10161e;border:1px dashed #3b4653}
-.toolbar{display:flex;gap:8px;flex-wrap:wrap}.toolbar button{padding:10px 12px;font-size:13px}.milestone{display:flex;gap:10px;align-items:center;margin-top:8px}.milestone input{flex:1}
-.chart{display:flex;align-items:end;gap:7px;height:150px;padding:12px 2px 0;border-bottom:1px solid #2a3440}.bar{flex:1;min-width:8px;background:#778493;border-radius:5px 5px 0 0;position:relative}.bar span{position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);font-size:9px;color:#aeb7c1}.chart-labels{display:flex;gap:7px;padding-top:6px}.chart-labels span{flex:1;text-align:center;color:#7f8a97;font-size:9px}
-.small{font-size:11px;color:#9aa5b2}.empty{padding:25px 10px;text-align:center;color:#9aa5b2}
-@media(max-width:420px){.app{padding-left:10px;padding-right:10px}.current{display:block}.current>div+div{margin-top:10px;text-align:left!important}.sets{gap:6px}.statgrid{grid-template-columns:1fr 1fr}.stat:last-child{grid-column:1/-1}}
-@media(min-width:700px){body{padding-bottom:20px}.bottom-nav{position:static;max-width:620px;margin:auto;border:0;background:transparent;backdrop-filter:none}.bottom-nav button{border:1px solid #27313d;background:#151c25;border-radius:12px}.bottom-nav button span{font-size:11px}}
+
+/* Version 9 – responsive workout management, progress and editors */
+.app{max-width:720px;margin:auto;padding:14px 14px 32px}
+h3{font-size:15px;margin:0;font-weight:800}
+.start-top{width:100%;margin:2px 0 14px;padding:17px;font-size:16px}
+.goal-graphic{overflow:hidden;background:linear-gradient(145deg,#1b2936,#111821);border-color:#334355}
+.goal-head,.section-head,.editor-row-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.goal-head h2,.section-head h2{margin:3px 0 0;font-size:21px}
+.icon-button{padding:8px 10px;background:#263544;border:1px solid #425367;color:#fff}
+.goal-highlight{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:19px 0 15px}
+.goal-highlight>div{display:flex;flex-direction:column;gap:6px}
+.muted-label{font-size:11px;color:#a9b5c3}
+.goal-highlight strong{font-size:18px;line-height:1.25}
+.goal-highlight b{font-size:15px;line-height:1.35}
+.goal-progress-track,.training-progress-track{height:8px;border-radius:999px;background:#303d4b;overflow:hidden}
+.goal-progress-fill{height:100%;background:#d8e2ed;border-radius:999px;transition:width .2s}
+.goal-milestones{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 8px;margin:17px 0 13px}
+.goal-milestone{display:flex;align-items:center;gap:7px;color:#8998a9;font-size:11px;line-height:1.3;min-width:0}
+.goal-milestone>span:last-child{overflow-wrap:anywhere}
+.milestone-dot{flex:0 0 25px;width:25px;height:25px;border-radius:50%;display:grid;place-items:center;background:#222f3d;border:1px solid #495b6e;font-weight:800;font-size:10px;color:#dce5ee}
+.goal-milestone.done .milestone-dot,.goal-milestone.current .milestone-dot{background:#edf3f8;color:#111923;border-color:#edf3f8}
+.goal-milestone.current{color:#f4f6f8;font-weight:800}
+.goal-milestone.next{color:#d5dfe9}
+.goal-bottom{display:flex;align-items:center;justify-content:space-between;border-top:1px solid #344352;padding-top:12px;color:#93a3b4;font-size:11px}
+.text-button{padding:5px 0;background:transparent;color:#e1e8ef;font-size:12px;font-weight:750}
+.compact-title{display:flex;align-items:end;justify-content:space-between;gap:10px;margin:19px 3px 8px}
+.compact-title h2{font-size:18px;margin:3px 0 0}
+.compact-plan{padding:12px}
+.compact-exercise{display:flex;align-items:center;gap:10px;padding:10px 2px;border-bottom:1px solid #2b3541}
+.compact-exercise:last-of-type{border-bottom:0}
+.compact-number{width:28px;height:28px;display:grid;place-items:center;border-radius:9px;background:#273341;font-size:12px;font-weight:800}
+.compact-ex-name{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+.compact-ex-name b{font-size:13px}
+.compact-ex-name small{font-size:11px;color:#9ba8b7}
+.compact-sets{font-size:11px;color:#c5cfda;white-space:nowrap}
+.full-width{width:100%}
+.compact-plan .full-width{margin-top:10px}
+.safety-note{font-size:11px;color:#788797;text-align:center;padding:12px 0}
+.empty-goal{background:#151d27}
+.training-summary{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:12px;background:#151d27;border:1px solid #273543;border-radius:15px;padding:13px;margin:10px 0}
+.training-summary>div:first-child{display:flex;flex-direction:column;gap:2px}
+.training-summary strong{font-size:17px}
+.training-summary span{font-size:10px;color:#97a5b5}
+.training-summary .text-button{grid-column:1/-1;justify-self:start}
+.training-progress-track>div{height:100%;background:#dce5ee;border-radius:999px}
+.training-tip,.section-intro{font-size:12px;line-height:1.5;color:#a4b0be;padding:4px 2px 8px}
+.exercise-card{padding:14px;margin:12px 0}
+.exercise-card.skipped{opacity:.67}
+.exercise-card.done{border-color:#526c60}
+.exercise-card-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.exercise-order{width:30px;height:30px;flex:0 0 30px;border-radius:10px;display:grid;place-items:center;background:#273543;font-weight:800;font-size:12px}
+.exercise-title{flex:1;min-width:0}
+.exercise-title h3{font-size:15px}
+.exercise-order-actions{display:flex;gap:4px}
+.mini-icon{background:#202b37;border:1px solid #394757;color:#f3f6fa;border-radius:9px;width:31px;height:31px;padding:0;font-size:15px}
+.mini-icon:disabled{opacity:.25;cursor:default}
+.suggestion-chip{display:inline-block;background:#203b32;color:#c5eed7;border:1px solid #315b47;border-radius:10px;padding:7px 9px;font-size:11px;font-weight:700;margin:0 0 12px}
+.field-label{display:flex;flex-direction:column;gap:4px;font-size:11px;color:#9eabba;margin:8px 0}
+.input{min-width:0}
+.rep-input{text-align:center;font-size:18px;font-weight:750}
+.sets-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.exercise-card-actions,.history-actions,.manage-actions{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.exercise-card-actions{margin-top:12px}
+.mini-button{border-radius:10px;padding:8px 10px;font-size:11px;background:#202b37;color:#edf2f7;border:1px solid #364555;font-weight:750}
+.mini-done{background:#203b32;color:#c5eed7;border-color:#315b47}
+.mini-skipped{background:#3a2b22;color:#f7d2b4;border-color:#614632}
+.skipped-notice{font-size:12px;padding:8px 10px;background:#372b23;border-radius:9px;color:#f2c7a7;margin-bottom:8px}
+.finish-actions{margin:18px 0}
+.history-card{padding:15px}
+.history-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.history-head h3{font-size:17px}
+.history-exercises{border-top:1px solid #2a3541;border-bottom:1px solid #2a3541;margin:10px 0}
+.history-exercise{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid #222c37;font-size:11px}
+.history-exercise:last-child{border-bottom:0}
+.history-exercise span:first-child{font-weight:650}
+.history-exercise span:nth-child(2){color:#a9b5c2}
+.history-exercise b{white-space:nowrap}
+.history-actions{justify-content:flex-end}
+.danger{background:#2a1c20;color:#ffc2c7;border:1px solid #5b3037}
+.history-edit-card h3{margin-bottom:10px}
+.skip-check{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12px}
+.statgrid{margin:6px 0 16px}
+.progress-goal{background:linear-gradient(145deg,#192737,#111820)}
+.progress-goal h2{margin:5px 0}
+.progress-goal .goal-milestones{grid-template-columns:repeat(2,minmax(0,1fr))}
+.mini-road .goal-milestone{font-size:10px}
+.section-title h2{font-size:18px;margin:2px 0 0}
+.progress-exercise{padding:15px}
+.progress-ex-head{display:flex;justify-content:space-between;gap:12px;align-items:start}
+.progress-ex-head h3{font-size:15px;margin-bottom:4px}
+.progress-current{display:grid;grid-template-columns:minmax(0,1fr) minmax(130px,.9fr);gap:10px;margin:15px 0 8px}
+.progress-current>div:first-child{display:flex;flex-direction:column;gap:4px}
+.progress-current>div:first-child b{font-size:17px}
+.progress-current small{font-size:11px;color:#9eabba}
+.suggestion-box{display:flex;flex-direction:column;gap:5px;border:1px solid #365344;background:#1d332b;border-radius:11px;padding:10px}
+.suggestion-box span{font-size:10px;color:#b9ddc8;line-height:1.3}
+.suggestion-box b{font-size:13px;color:#ebfff2}
+.suggestion-box.decrease{background:#39291f;border-color:#674832}
+.suggestion-box.decrease span,.suggestion-box.decrease b{color:#ffddc2}
+.suggestion-box.neutral{background:#202a35;border-color:#354352}
+.suggestion-box.neutral span,.suggestion-box.neutral b{color:#bdc8d5}
+.progress-history-bars{display:flex;align-items:end;gap:12px;min-height:75px;border-top:1px solid #2b3541;padding-top:10px;margin-top:14px}
+.progress-bar-group{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:end;gap:5px;min-width:0}
+.progress-bar-column{position:relative;min-width:23px;width:70%;max-width:42px;border-radius:6px 6px 2px 2px;background:#71879d;display:flex;align-items:start;justify-content:center}
+.progress-bar-column span{font-size:10px;color:#fff;font-weight:800;transform:translateY(-17px)}
+.progress-bar-group small{font-size:9px;color:#8190a0}
+.management-card{padding:15px}
+.section-head{margin-bottom:8px}
+.section-head h3{margin-top:3px}
+.small-primary{padding:9px 11px;font-size:12px}
+.manage-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid #2b3541}
+.manage-row:last-child{border-bottom:0}
+.manage-main{display:flex;flex-direction:column;gap:4px;min-width:0}
+.manage-main b{font-size:13px}
+.manage-actions{justify-content:flex-end}
+.danger-text{color:#ffb9bf}
+.export-card h3{margin:5px 0}
+.export-card p{line-height:1.5}
+.plan-editor .editor-exercises-head{margin:18px 3px 8px}
+.editor-exercises-head h3{font-size:16px}
+.editor-row-head{margin-bottom:9px}
+.editor-row-head h3{font-size:14px}
+.form-grid{display:grid;gap:8px}
+.form-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.form-grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.form-grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.rule-panel{background:#101720;border:1px solid #293644;border-radius:13px;padding:12px;margin-top:12px}
+.rule-panel .eyebrow{margin-bottom:6px}
+.rule-panel .note{line-height:1.5;margin:7px 0 0}
+.milestones-input{height:auto;min-height:120px;resize:vertical}
+.editor-row-head .danger-text{font-size:19px}
+@media(max-width:520px){
+ .app{padding:10px 10px 28px}
+ .goal-highlight{gap:8px}
+ .goal-highlight strong{font-size:16px}
+ .goal-milestones{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .history-exercise{grid-template-columns:minmax(0,1fr) auto;gap:6px}
+ .history-exercise b{grid-column:1/-1;justify-self:end}
+ .form-grid.four{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .form-grid.three{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .progress-current{grid-template-columns:1fr}
+ .manage-row{align-items:flex-start;flex-direction:column}
+ .manage-actions{justify-content:flex-start}
+ .training-summary{grid-template-columns:1fr}
+ .training-summary .training-progress-track{grid-row:2}
+ .exercise-card-actions .mini-button{flex:1}
+}
