@@ -149,6 +149,6 @@ function editGoal(){
 window.addEventListener("hashchange",render);
 if(!location.hash)location.hash="home";
 render();
-if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js?v=5",{scope:"./"}).catch(()=>{});
+if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js?v=6",{scope:"./"}).catch(()=>{});
 window.addEventListener("load",()=>{if(route()==="more")checkPwaStatus();});
 window.addEventListener("hashchange",()=>{if(route()==="more")setTimeout(checkPwaStatus,0);});
