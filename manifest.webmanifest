@@ -1,26 +1,39 @@
 {
-  "name":"Fitness Trainingstagebuch",
-  "short_name":"Fitness",
-  "id":"/",
-  "start_url":"/",
-  "scope":"/",
-  "lang":"de-DE",
-  "display":"standalone",
-  "display_override":["standalone"],
-  "prefer_related_applications":false,
-  "background_color":"#0b1016",
-  "theme_color":"#0b1016",
-  "description":"Persönliches Trainingstagebuch",
-  "screenshots":[
+  "name": "Fitness Trainingstagebuch",
+  "short_name": "Fitness",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "lang": "de-DE",
+  "display": "standalone",
+  "display_override": [
+    "standalone"
+  ],
+  "prefer_related_applications": false,
+  "background_color": "#0b1016",
+  "theme_color": "#0b1016",
+  "description": "Persönliches Trainingstagebuch",
+  "screenshots": [
     {
-      "src":"/screenshot-install.png",
-      "sizes":"320x320",
-      "type":"image/png",
-      "form_factor":"narrow",
-      "label":"Fitness Trainingstagebuch"
+      "src": "/screenshot-install.png",
+      "sizes": "320x320",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Fitness Trainingstagebuch"
     }
   ],
-  "icons":[
-    {"src":"/icon.svg","sizes":"512x512","type":"image/svg+xml","purpose":"any"}
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
   ]
 }
