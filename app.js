@@ -118,7 +118,7 @@ function freshDraft() {
  const items=p.exercises.map(ex=>{const s=getSuggestion(ex);return {exerciseId:ex.id,name:ex.name,weight:s?s.weight:(ex.weight||""),kind:ex.kind,minReps:ex.minReps,maxReps:ex.maxReps,increaseStep:ex.increaseStep,decreaseStep:ex.decreaseStep,failuresBeforeDecrease:ex.failuresBeforeDecrease,reps:Array(todaySetCount(ex)).fill(""),done:false,skipped:false,suggestionText:s?s.message+" · "+s.weight:"",suggestionWeight:s?s.weight:""}});
  return {id:uid("draft"),planId:p.id,planName:p.name,date:today(),current:0,items:items,planSnapshot:deepCopy(p)};
 }
-function startTraining(){draft=normalizeDraftRecord(get("fitness.draft",null));if(!draft)draft=freshDraft();if(!draft)return;if(!draft.planSnapshot){const p=plans.find(x=>x.id===draft.planId)||activePlan();draft.planSnapshot=p?deepCopy(p):null;}put("fitness.draft",draft);nav("train")}
+function startTraining(){draft=normalizeDraftRecord(get("fitness.draft",null));if(!draft)draft=freshDraft();if(!draft)return;if(!draft.planSnapshot){const p=plans.find(x=>x.id===draft.planId)||activePlan();draft.planSnapshot=p?deepCopy(p):null;}put("fitness.draft",draft);nav("train");render()}
 function train(){
  if(!draft)draft=normalizeDraftRecord(get("fitness.draft",null));
  if(!draft||!Array.isArray(draft.items))return '<div class="app"><header><h2>Training</h2><div class="sub">Deine gesamte Einheit auf einen Blick.</div></header><div class="card"><p>Du hast noch keine laufende Trainingseinheit.</p><button class="primary" data-action="start-training">▶ Training starten</button></div></div>';
@@ -250,4 +250,4 @@ document.getElementById("app").addEventListener("input",event=>{
 window.addEventListener("hashchange",render);
 if(!location.hash)location.hash="home";
 render();
-if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js?v=9",{scope:"./"}).catch(error=>console.warn("Service Worker konnte nicht registriert werden.",error));
+if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js?v=14",{scope:"./"}).catch(error=>console.warn("Service Worker konnte nicht registriert werden.",error));
