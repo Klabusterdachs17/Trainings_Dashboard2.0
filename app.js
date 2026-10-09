@@ -60,6 +60,8 @@ function normalizeDraftRecord(raw) {
 }
 function migrate() {
  if(!localStorage.getItem("fitness.workouts"))put("fitness.workouts",SEED);
+ let savedWorkouts=get("fitness.workouts",SEED);
+ if(Array.isArray(savedWorkouts)){let changed=false;savedWorkouts=savedWorkouts.map((w,i)=>{if(w&&w.id)return w;changed=true;const date=String((w&&w.date)||"unknown").replace(/\\D/g,"");return Object.assign({},w,{id:"legacy-"+date+"-"+i});});if(changed)put("fitness.workouts",savedWorkouts);}
  let gs=get("fitness.goals",null);if(!gs){const old=get("fitness.goal",null);gs=old?[old]:DEFAULT_GOALS;}
  gs=Array.isArray(gs)?gs.map(normalizeGoal):deepCopy(DEFAULT_GOALS);if(!gs.length)gs=deepCopy(DEFAULT_GOALS);
  if(!gs.some(g=>g.status==="active")){const id=localStorage.getItem("fitness.activeGoal"),candidate=gs.find(g=>g.id===id)||gs.find(g=>g.status!=="completed")||gs[0];if(candidate)candidate.status="active";}
