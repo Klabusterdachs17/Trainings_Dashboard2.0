@@ -212,7 +212,7 @@ function progress(){
  if(pullups.length){
   out+='<section class="card pullup-progress"><div class="eyebrow">DEIN GROSSES ZIEL</div><h2>Der Weg zum ersten Klimmzug</h2><p class="section-intro">Bei unterstützten Klimmzügen ist weniger Unterstützung besser. Hier siehst du jede Einheit mit eingetragenen Wiederholungen – nicht nur den letzten Wert.</p>';
   pullups.forEach(ex=>{const hist=exerciseHistory(ex).filter(h=>h.reps.length>0&&h.weight);const completed=hist.filter(h=>h.item.done&&h.fullyLogged);const latest=hist[0];out+='<div class="pullup-summary"><div><span class="muted-label">Letzte dokumentierte Unterstützung</span><b>'+esc(latest?latest.weight:"Noch keine Daten")+'</b><small>'+esc(latest?latest.reps.join(" / ")+" Wiederholungen":"Trage deine erste Einheit ein.")+'</small></div><div><span class="muted-label">Einheiten</span><b>'+hist.length+'</b><small>'+completed.length+' vollständig dokumentiert</small></div></div><div class="trend-title">Unterstützung im Verlauf <span>weniger = besser</span></div>';
-   const chartEntries=hist.slice(0,12).reverse();out+=progressChart(chartEntries,"weight",true);
+   const chartEntries=hist.slice(0,12).reverse();out+=progressCombinedChart(chartEntries,"assistance");
    if(hist.length>1){const first=progressNumber(hist[hist.length-1].weight),last=progressNumber(hist[0].weight);if(first!==null&&last!==null)out+='<p class="trend-caption">'+(last<first?"Die benötigte Unterstützung ist um "+(first-last).toLocaleString("de-DE")+" kg gesunken.":(last>first?"Zuletzt wurde mehr Unterstützung verwendet als zu Beginn des angezeigten Verlaufs.":"Die Unterstützung ist bisher gleich geblieben."))+'</p>';}
   });out+='</section>';
  }
