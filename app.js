@@ -160,17 +160,55 @@ function saveHistoryEdit(id){
  workouts=get("fitness.workouts",SEED).map(raw=>String(raw.id)===String(id)?w:normalizeWorkout(raw));if(put("fitness.workouts",workouts))nav("history");
 }
 function deleteWorkout(id){const w=sortedWorkouts().find(x=>x.id===id);if(!w)return;if(!confirm("Training vom "+w.date+" wirklich löschen? Das kann nicht rückgängig gemacht werden."))return;workouts=get("fitness.workouts",SEED).filter(x=>String(x.id)!==String(id));if(put("fitness.workouts",workouts))render()}
-function progress(){
- const p=activePlan();if(!p)return '<div class="app"><header><h2>Fortschritt</h2></header><div class="card">Lege zuerst einen Trainingsplan an.</div></div>';
- const list=sortedWorkouts(),sets=list.reduce((sum,w)=>sum+w.items.reduce((n,it)=>n+it.reps.filter(x=>String(x).trim()!=="").length,0),0);
- let out='<div class="app"><header><h2>Fortschritt</h2><div class="sub">Dein Weg zum Ziel und klare Hinweise für die nächste Belastung.</div></header><div class="statgrid"><div class="stat"><b>'+list.length+'</b><span>Trainingseinheiten</span></div><div class="stat"><b>'+sets+'</b><span>Sätze eingetragen</span></div><div class="stat"><b>'+esc(list[0]?list[0].date:"–")+'</b><span>Letztes Training</span></div></div>';
- const g=activeGoal();if(g){const road=g.roadmap.length?g.roadmap:[g.current,g.next,g.name].filter(Boolean);let idx=road.findIndex(x=>x.toLowerCase()===String(g.current).toLowerCase());if(idx<0)idx=0;out+='<section class="card progress-goal"><div class="eyebrow">DEIN ZIEL</div><h2>'+esc(g.name)+'</h2><p class="meta">Aktuell: '+esc(g.current||"noch kein aktueller Stand")+' · Als Nächstes: '+esc(g.next||"Meilenstein festlegen")+'</p><div class="goal-progress-track"><div class="goal-progress-fill" style="width:'+(road.length>1?Math.round((idx+.25)/(road.length-1)*100):0)+'%"></div></div><div class="goal-milestones mini-road">';
- road.forEach((s,i)=>{out+='<div class="goal-milestone '+(i<idx?"done":(i===idx?"current":(i===idx+1?"next":"future")))+'"><span class="milestone-dot">'+(i<idx?"✓":i+1)+'</span><span>'+esc(s)+'</span></div>';});out+='</div><button class="text-button" data-action="edit-active-goal">Ziel bearbeiten →</button></section>';}
- out+='<div class="section-title"><div><span class="eyebrow">FORTSCHRITT JE ÜBUNG</span><h2>Der nächste sinnvolle Schritt</h2></div></div><p class="section-intro">Steigerung nach allen Sätzen an der Obergrenze; Reduzierung erst nach zwei aufeinanderfolgenden Einheiten unter der Mindestwiederholungszahl. Übersprungene Übungen zählen nicht.</p>';
- p.exercises.forEach(ex=>{const hist=exerciseHistory(ex),completedHist=hist.filter(h=>h.fullyLogged&&h.item.done),latest=completedHist[0],oldest=completedHist[completedHist.length-1],s=getSuggestion(ex),reps=latest?latest.reps.join(" / "):"Noch keine vollständigen Daten";out+='<section class="card progress-exercise"><div class="progress-ex-head"><div><h3>'+esc(ex.name)+'</h3><div class="meta">Ziel '+ex.minReps+'–'+ex.maxReps+' Wdh. · '+ex.setsSun+' Sätze</div></div><span class="badge">'+(ex.kind==="assistance"?"Unterstützung":(ex.kind==="bodyweight"?"Körpergewicht":"Gewicht"))+'</span></div><div class="progress-current"><div><span class="muted-label">Letzte Leistung</span><b>'+esc(latest?latest.weight:ex.weight||"–")+'</b><small>'+esc(reps)+'</small></div>';
- if(s)out+='<div class="suggestion-box '+s.kind+'"><span>'+esc(s.message)+'</span><b>'+esc(s.weight)+'</b></div>';else out+='<div class="suggestion-box neutral"><span>Nächster Schritt</span><b>'+(ex.kind==="bodyweight"?"Wiederholungsziel weiterentwickeln":"Noch kein Vorschlag")+'</b></div>';
- out+='</div><div class="progress-weight-comparison"><div><span class="muted-label">Startwert</span><b>'+esc(oldest?oldest.weight:ex.weight||"–")+'</b></div><div><span class="muted-label">Zuletzt</span><b>'+esc(latest?latest.weight:ex.weight||"–")+'</b></div></div><div class="progress-history-bars">';const bars=completedHist.slice(0,5).reverse();if(!bars.length)out+='<span class="note">Trage deine nächste Einheit ein, um hier den Verlauf zu sehen.</span>';else{const peak=Math.max(ex.maxReps,...bars.flatMap(h=>h.reps));bars.forEach(h=>{const n=Math.max(...h.reps);out+='<div class="progress-bar-group"><div class="progress-bar-column" style="height:'+Math.max(8,Math.round(n/peak*52))+'px"><span>'+n+'</span></div><small>'+esc(h.workout.date.slice(0,5))+'</small></div>';});}out+='</div></section>';});
+function progressChart(entries,metric,assistance){
+ const vals=entries.map(h=>metric==="weight"?progressNumber(h.weight):Math.max(0,...h.reps));
+ const valid=vals.filter(v=>v!==null&&Number.isFinite(v));if(!valid.length)return '<div class="progress-empty">Noch nicht genug eingetragene Werte für einen Verlauf.</div>';
+ const min=Math.min(...valid),max=Math.max(...valid),range=max-min||1;
+ let out='<div class="trend-chart" role="img" aria-label="Verlauf über '+entries.length+' Trainingseinheiten">';
+ entries.forEach((h,i)=>{const raw=vals[i];if(raw===null||!Number.isFinite(raw)){out+='<div class="trend-point missing"><span>–</span><small>'+esc(h.workout.date.slice(0,5))+'</small></div>';return;}
+ let ratio=(raw-min)/range;if(assistance)ratio=1-ratio;const height=20+Math.round(ratio*54);
+ const value=metric==="weight"?String(h.weight||"–"):String(Math.max(...h.reps));
+ out+='<div class="trend-point"><b>'+esc(value)+'</b><div class="trend-bar-wrap"><div class="trend-bar '+(assistance?"assistance":"")+'" style="height:'+height+'px"></div></div><small>'+esc(h.workout.date.slice(0,5))+'</small></div>';});
  return out+'</div>';
+}
+function progressNumber(value){const match=String(value||"").replace(",",".").match(/-?\d+(?:\.\d+)?/);if(!match)return null;const n=Number(match[0]);return Number.isFinite(n)?n:null}
+function progress(){
+ const list=sortedWorkouts(),sets=list.reduce((sum,w)=>sum+w.items.reduce((n,it)=>n+it.reps.filter(x=>String(x).trim()!=="").length,0),0);
+ const p=activePlan(),g=activeGoal();
+ let out='<div class="app progress-page"><header><h2>Fortschritt</h2><div class="sub">Deine Entwicklung über alle dokumentierten Trainingseinheiten.</div></header><div class="statgrid"><div class="stat"><b>'+list.length+'</b><span>Trainingseinheiten</span></div><div class="stat"><b>'+sets+'</b><span>Sätze eingetragen</span></div><div class="stat"><b>'+esc(list[0]?list[0].date:"–")+'</b><span>Letztes Training</span></div></div>';
+ const allExercises=[];const seen=new Set();
+ (p?p.exercises:[]).forEach(ex=>{const key=ex.id+"|"+ex.name.toLowerCase();if(!seen.has(key)){seen.add(key);allExercises.push(ex);}});
+ if(g){const road=g.roadmap.length?g.roadmap:[g.current,g.next,g.name].filter(Boolean);let idx=road.findIndex(x=>x.toLowerCase()===String(g.current).toLowerCase());if(idx<0)idx=0;
+ out+='<section class="card progress-goal"><div class="eyebrow">DEIN AKTIVES ZIEL</div><h2>'+esc(g.name)+'</h2><p class="meta">Aktuell: '+esc(g.current||"noch kein aktueller Stand")+' · Als Nächstes: '+esc(g.next||"Meilenstein festlegen")+'</p><div class="goal-progress-track"><div class="goal-progress-fill" style="width:'+(road.length>1?Math.round((idx+.25)/(road.length-1)*100):0)+'%"></div></div><div class="goal-milestones mini-road">';
+ road.forEach((s,i)=>{out+='<div class="goal-milestone '+(i<idx?"done":(i===idx?"current":(i===idx+1?"next":"future")))+'"><span class="milestone-dot">'+(i<idx?"✓":i+1)+'</span><span>'+esc(s)+'</span></div>';});
+ out+='</div><button class="text-button" data-action="edit-active-goal">Ziel bearbeiten →</button></section>';}
+ const pullups=allExercises.filter(ex=>/klimmzug|klimmzüge|pull.?up/i.test(ex.name)&&ex.kind==="assistance");
+ if(pullups.length){
+  out+='<section class="card pullup-progress"><div class="eyebrow">DEIN GROSSES ZIEL</div><h2>Der Weg zum ersten Klimmzug</h2><p class="section-intro">Bei unterstützten Klimmzügen ist weniger Unterstützung besser. Hier siehst du jede Einheit mit eingetragenen Wiederholungen – nicht nur den letzten Wert.</p>';
+  pullups.forEach(ex=>{const hist=exerciseHistory(ex).filter(h=>h.reps.length>0&&h.weight);const completed=hist.filter(h=>h.item.done&&h.fullyLogged);const latest=hist[0];out+='<div class="pullup-summary"><div><span class="muted-label">Letzte dokumentierte Unterstützung</span><b>'+esc(latest?latest.weight:"Noch keine Daten")+'</b><small>'+esc(latest?latest.reps.join(" / ")+" Wiederholungen":"Trage deine erste Einheit ein.")+'</small></div><div><span class="muted-label">Einheiten</span><b>'+hist.length+'</b><small>'+completed.length+' vollständig dokumentiert</small></div></div><div class="trend-title">Unterstützung im Verlauf <span>weniger = besser</span></div>';
+   const chartEntries=hist.slice(0,12).reverse();out+=progressChart(chartEntries,"weight",true);
+   if(hist.length>1){const first=progressNumber(hist[hist.length-1].weight),last=progressNumber(hist[0].weight);if(first!==null&&last!==null)out+='<p class="trend-caption">'+(last<first?"Die benötigte Unterstützung ist um "+(first-last).toLocaleString("de-DE")+" kg gesunken.":(last>first?"Zuletzt wurde mehr Unterstützung verwendet als zu Beginn des angezeigten Verlaufs.":"Die Unterstützung ist bisher gleich geblieben."))+'</p>';}
+  });out+='</section>';
+ }
+ out+='<div class="section-title"><div><span class="eyebrow">KRAFTENTWICKLUNG</span><h2>Alle Übungen im Verlauf</h2></div></div><p class="section-intro">Jeder Balken steht für eine dokumentierte Trainingseinheit. Übersprungene Übungen werden ausgeschlossen; vorgeschlagene Gewichte fließen nicht in die Auswertung ein.</p>';
+ if(!p||!p.exercises.length)out+='<section class="card">Lege einen aktiven Trainingsplan an, damit deine Übungen hier erscheinen.</section>';
+ (p?p.exercises:[]).forEach(ex=>{
+  const hist=exerciseHistory(ex).filter(h=>h.reps.length>0&&h.item.weight).slice(0,12).reverse();
+  const completed=hist.filter(h=>h.item.done&&h.fullyLogged),latest=hist.length?hist[hist.length-1]:null,previous=hist.length>1?hist[hist.length-2]:null,s=getSuggestion(ex);
+  const label=ex.kind==="assistance"?"Unterstützung":(ex.kind==="bodyweight"?"Körpergewicht":"Gewicht");
+  out+='<details class="card progress-exercise"><summary class="progress-ex-summary"><div><h3>'+esc(ex.name)+'</h3><div class="meta">Ziel '+ex.minReps+'–'+ex.maxReps+' Wdh. · '+label+'</div></div><span class="progress-summary-value">'+esc(latest?latest.weight:ex.weight||"–")+'<small>zuletzt</small></span></summary>';
+  if(latest){out+='<div class="progress-session-stats"><div><span class="muted-label">Letzte Einheit</span><b>'+esc(latest.reps.join(" / "))+'</b><small>'+esc(latest.workout.date)+'</small></div><div><span class="muted-label">Davor</span><b>'+esc(previous?previous.reps.join(" / "):"–")+'</b><small>'+esc(previous?previous.workout.date:"Noch kein Vergleich")+'</small></div></div>';}
+  out+='<div class="trend-title">'+(ex.kind==="assistance"?"Unterstützung über die Zeit":"Gewicht über die Zeit")+' <span>'+hist.length+' Einheiten</span></div>'+progressChart(hist,ex.kind==="bodyweight"?"reps":"weight",ex.kind==="assistance");
+  out+='<div class="trend-title">Wiederholungen je Einheit <span>höchster Satz</span></div>'+progressChart(hist,"reps",false);
+  if(s)out+='<div class="suggestion-box '+s.kind+'"><span>'+esc(s.message)+'</span><b>'+esc(s.weight)+'</b></div>';
+  if(!hist.length)out+='<div class="progress-empty">Noch keine ausreichend dokumentierten Daten für diese Übung.</div>';
+  out+='<p class="trend-caption">Es werden bis zu 12 der letzten Einheiten angezeigt. Insgesamt '+completed.length+' Einheiten sind vollständig dokumentiert.</p></details>';
+ });
+ out+='<section class="card progress-consistency"><div class="eyebrow">TRAININGSKONSTANZ</div><h3>Deine letzten Wochen</h3><div class="consistency-grid">';
+ const counts=[];for(let d=5;d>=0;d--){const date=new Date();date.setDate(date.getDate()-d*7);const from=new Date(date);from.setDate(from.getDate()-6);const count=list.filter(w=>{const t=toTimestamp(w.date);return t>=from.setHours(0,0,0,0)&&t<=date.setHours(23,59,59,999)}).length;counts.push({label:date.toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"}),count});}
+ counts.forEach(x=>{out+='<div class="consistency-week"><b>'+x.count+'</b><div class="consistency-bar-wrap"><div class="consistency-bar" style="height:'+Math.max(5,Math.min(48,x.count*16))+'px"></div></div><small>'+esc(x.label)+'</small></div>';});
+ out+='</div><p class="trend-caption">Gezählt werden abgeschlossene Trainingseinheiten pro rollierender 7-Tage-Periode.</p></section></div>';
+ return out;
 }
 function more(){
  let out='<div class="app"><header><h2>Mehr</h2><div class="sub">Trainingspläne, Ziele und deine Daten verwalten.</div></header><section class="card management-card"><div class="section-head"><div><div class="eyebrow">TRAININGSPLÄNE</div><h3>Deine Pläne</h3></div><button class="primary small-primary" data-action="new-plan">+ Neuer Plan</button></div>';
