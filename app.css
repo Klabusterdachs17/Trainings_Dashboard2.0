@@ -198,3 +198,8 @@ h3{font-size:15px;margin:0;font-weight:800}
 .history-session-notes{background:#101720;border:1px solid #293644;border-radius:10px;padding:10px;margin:10px 0;font-size:12px}
 .history-session-notes b{font-size:11px;color:#a9b5c2}
 .history-session-notes p{margin:5px 0 0;white-space:pre-wrap;line-height:1.45}
+
+/* Buttons in the workout view use a compact two-column layout on phones */
+.training-page .exercise-card-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.training-page .exercise-card-actions .mini-button{width:100%;min-width:0;min-height:36px;line-height:1.2;padding:7px 6px;overflow-wrap:anywhere}
+@media(max-width:380px){.training-page .exercise-card-actions{grid-template-columns:repeat(2,minmax(0,1fr))}.training-page .mini-button{font-size:10px}}
