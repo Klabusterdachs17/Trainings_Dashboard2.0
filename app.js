@@ -161,13 +161,25 @@ function saveHistoryEdit(id){
 }
 function deleteWorkout(id){const w=sortedWorkouts().find(x=>x.id===id);if(!w)return;if(!confirm("Training vom "+w.date+" wirklich löschen? Das kann nicht rückgängig gemacht werden."))return;workouts=get("fitness.workouts",SEED).filter(x=>String(x.id)!==String(id));if(put("fitness.workouts",workouts))render()}
 function progressChart(entries,metric,assistance){
- const vals=entries.map(h=>metric==="weight"?progressNumber(h.weight):Math.max(0,...h.reps));
+ if(metric==="reps"){
+  const all=entries.flatMap(h=>h.reps.filter(v=>v!==null&&Number.isFinite(v)));
+  if(!all.length)return '<div class="progress-empty">Noch keine Wiederholungen dokumentiert.</div>';
+  const max=Math.max(12,...all);
+  let out='<div class="trend-chart set-trend-chart" role="img" aria-label="Wiederholungen pro Satz und Trainingseinheit">';
+  entries.forEach(h=>{
+   out+='<div class="trend-session"><div class="trend-session-bars">';
+   h.reps.forEach((raw,i)=>{const height=Math.max(6,Math.round(raw/max*76));out+='<div class="trend-set"><b>'+esc(String(raw))+'</b><div class="trend-bar-wrap"><div class="trend-bar" style="height:'+height+'px"></div></div><small>S'+(i+1)+'</small></div>';});
+   out+='</div><small class="trend-session-date">'+esc(h.workout.date.slice(0,5))+'</small></div>';
+  });
+  return out+'</div>';
+ }
+ const vals=entries.map(h=>progressNumber(h.weight));
  const valid=vals.filter(v=>v!==null&&Number.isFinite(v));if(!valid.length)return '<div class="progress-empty">Noch nicht genug eingetragene Werte für einen Verlauf.</div>';
  const min=Math.min(...valid),max=Math.max(...valid),range=max-min||1;
- let out='<div class="trend-chart" role="img" aria-label="Verlauf über '+entries.length+' Trainingseinheiten">';
+ let out='<div class="trend-chart" role="img" aria-label="Gewichtsverlauf über '+entries.length+' Trainingseinheiten">';
  entries.forEach((h,i)=>{const raw=vals[i];if(raw===null||!Number.isFinite(raw)){out+='<div class="trend-point missing"><span>–</span><small>'+esc(h.workout.date.slice(0,5))+'</small></div>';return;}
  let ratio=(raw-min)/range;if(assistance)ratio=1-ratio;const height=20+Math.round(ratio*54);
- const value=metric==="weight"?String(h.weight||"–"):String(Math.max(...h.reps));
+ const value=String(h.weight||"–");
  out+='<div class="trend-point"><b>'+esc(value)+'</b><div class="trend-bar-wrap"><div class="trend-bar '+(assistance?"assistance":"")+'" style="height:'+height+'px"></div></div><small>'+esc(h.workout.date.slice(0,5))+'</small></div>';});
  return out+'</div>';
 }

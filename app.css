@@ -264,3 +264,14 @@ h3{font-size:15px;margin:0;font-weight:800}
 .progress-page .consistency-bar-wrap{height:50px;display:flex;align-items:flex-end;width:100%;justify-content:center}
 .progress-page .consistency-bar{width:65%;max-width:28px;background:#5d91b7;border-radius:5px 5px 2px 2px}
 .progress-page .consistency-week small{font-size:9px;color:var(--muted,#9ba8b7)}
+
+/* Repetition trend: group one bar per set under each workout date */
+.progress-page .set-trend-chart{gap:12px;align-items:flex-end;padding-bottom:5px}
+.progress-page .trend-session{flex:0 0 auto;min-width:58px;display:flex;flex-direction:column;align-items:center;gap:5px}
+.progress-page .trend-session-bars{display:flex;align-items:flex-end;justify-content:center;gap:4px;min-height:96px}
+.progress-page .trend-set{width:17px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px}
+.progress-page .trend-set>b{font-size:10px;white-space:nowrap}
+.progress-page .trend-set .trend-bar-wrap{height:76px;width:100%;align-items:flex-end}
+.progress-page .trend-set .trend-bar{width:100%;max-width:none}
+.progress-page .trend-set>small{font-size:8px;color:var(--muted,#9ba8b7)}
+.progress-page .trend-session-date{font-size:10px;color:var(--muted,#9ba8b7);white-space:nowrap}
