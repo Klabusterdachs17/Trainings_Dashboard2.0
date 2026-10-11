@@ -189,19 +189,19 @@ function progressCombinedChart(entries,kind){
  const weights=entries.map(h=>progressNumber(h.weight)),valid=weights.filter(v=>v!==null);
  const minW=valid.length?Math.min(...valid):0,maxW=valid.length?Math.max(...valid):1;
  const range=maxW-minW||1,step=84,width=entries.length*step-12;
- const coords=weights.map((v,i)=>({x:i*step+36,y:40-(v===null?0:(v-minW)/range*30),v}));
+ const coords=weights.map((v,i)=>({x:i*step+36,y:38-(v===null?0:(v-minW)/range*26),v}));
  const points=coords.filter(p=>p.v!==null).map(p=>p.x+','+p.y).join(' ');
- let out='<div class="combined-chart-shell"><div class="combined-trend" role="img" aria-label="Tatsächliches Gewicht und Wiederholungen je Satz pro Trainingseinheit">';
- out+='<svg class="combined-weight-line" viewBox="0 0 '+width+' 46" width="'+width+'" height="46" aria-hidden="true"><polyline points="'+points+'" fill="none" stroke="#ffd166" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>';
- coords.forEach(p=>{if(p.v!==null)out+='<circle cx="'+p.x+'" cy="'+p.y+'" r="5.5" fill="#ffd166" stroke="#101720" stroke-width="2"/>';});
+ const lineColor=kind==="assistance"?"#67e8ad":"#ffd166";
+ let out='<div class="combined-chart-shell"><div class="combined-trend" role="img" aria-label="Gewicht und Wiederholungen pro Satz je Trainingstag">';
+ out+='<svg class="combined-weight-line" viewBox="0 '+0+' '+width+' 68" width="'+width+'" height="68" aria-hidden="true"><polyline points="'+points+'" fill="none" stroke="'+lineColor+'" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>';
+ coords.forEach((p,i)=>{if(p.v!==null){const label=String(p.v).replace(".",",")+" kg";out+='<circle cx="'+p.x+'" cy="'+p.y+'" r="5.5" fill="'+lineColor+'" stroke="#101720" stroke-width="2"/><text x="'+p.x+'" y="62" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="800">'+esc(label)+'</text>'; }});
  out+='</svg>';
- entries.forEach((h,i)=>{
-  const label=weights[i]===null?String(h.weight||"–"):String(weights[i]).replace(".",",")+" kg";
-  out+='<div class="combined-session"><div class="combined-weight"><b>'+esc(label)+'</b></div><div class="combined-reps">';
+ entries.forEach(h=>{
+  out+='<div class="combined-session"><div class="combined-weight"></div><div class="combined-reps">';
   h.reps.forEach((v,k)=>{const bh=Math.max(6,Math.round(v/maxReps*60));out+='<div class="combined-set"><b>'+esc(String(v))+'</b><div class="combined-rep-track"><div class="combined-rep-bar" style="height:'+bh+'px"></div></div><small>S'+(k+1)+'</small></div>';});
   out+='</div><small class="combined-date">'+esc(h.workout.date.slice(0,5))+'</small></div>';
  });
- out+='</div><div class="combined-legend"><span class="weight"></span><small>Tatsächlich verwendetes Gewicht (bei Klimmzügen: Unterstützung in kg)</small><span class="reps-key"></span><small>Wiederholungen pro Satz</small></div></div>';
+ out+='</div><div class="combined-legend"><span class="'+(kind==="assistance"?"assist":"weight")+'"></span><small>Gewicht (kg)</small><span class="reps-key"></span><small>Wiederholungen pro Satz</small></div></div>';
  return out;
 }
 function progressNumber(value){const match=String(value||"").replace(",",".").match(/-?\d+(?:\.\d+)?/);if(!match)return null;const n=Number(match[0]);return Number.isFinite(n)?n:null}
