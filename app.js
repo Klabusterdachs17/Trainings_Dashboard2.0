@@ -194,8 +194,8 @@ function progressCombinedChart(entries,kind){
  const linePoints=coords.filter(p=>p.v!==null).map(p=>p.x+','+p.y).join(' ');
  const lineColor=kind==="assistance"?"#67e8ad":"#ffd166";
  let out='<div class="combined-chart-shell"><div class="combined-trend" role="img" aria-label="Gewichtslinie über den Wiederholungsbalken, je Trainingstag">';
- out+='<svg class="combined-weight-line" viewBox="0 0 '+width+' 66" width="'+width+'" height="66" aria-hidden="true"><polyline points="'+linePoints+'" fill="none" stroke="#101720" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><polyline points="'+linePoints+'" fill="none" stroke="'+lineColor+'" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>';
- coords.forEach(p=>{if(p.v!==null){const label=String(p.v).replace(".",",")+" kg";out+='<circle cx="'+p.x+'" cy="'+p.y+'" r="5" fill="'+lineColor+'" stroke="#101720" stroke-width="2"/><text x="'+p.x+'" y="'+Math.max(12,p.y-9)+'" text-anchor="middle" fill="#ffffff" stroke="#101720" stroke-width="3" paint-order="stroke" font-size="11" font-weight="800">'+esc(label)+'</text>'; }});
+ out+='<svg class="combined-weight-line" viewBox="0 0 '+width+' 66" width="'+width+'" height="66" aria-hidden="true"><polyline points="'+linePoints+'" fill="none" stroke="'+lineColor+'" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>';
+ coords.forEach(p=>{if(p.v!==null){const label=String(p.v).replace(".",",")+" kg";out+='<circle cx="'+p.x+'" cy="'+p.y+'" r="4" fill="'+lineColor+'"/><text x="'+p.x+'" y="'+Math.max(12,p.y-7)+'" text-anchor="middle" fill="#ffffff" font-size="10" font-weight="700">'+esc(label)+'</text>'; }});
  out+='</svg>';
  entries.forEach(h=>{
   out+='<div class="combined-session"><div class="combined-weight"></div><div class="combined-reps">';
