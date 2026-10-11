@@ -179,3 +179,22 @@ h3{font-size:15px;margin:0;font-weight:800}
 .progress-weight-comparison{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0 2px;padding:10px;border-radius:10px;background:#101720;border:1px solid #293644}
 .progress-weight-comparison>div{display:flex;flex-direction:column;gap:4px}
 .progress-weight-comparison b{font-size:13px}
+
+/* Kompaktere Eingaben im Trainingsmodus: weniger Scrollen am Handy */
+.training-page .exercise-card{padding:10px;margin:8px 0;border-radius:14px}
+.training-page .exercise-card-head{gap:7px;margin-bottom:7px}
+.training-page .exercise-order{width:26px;height:26px;flex-basis:26px;border-radius:8px}
+.training-page .exercise-title h3{font-size:14px}
+.training-page .field-label{gap:3px;margin:5px 0;font-size:10px}
+.training-page .input{padding:8px 9px;margin-top:2px;border-radius:9px;font-size:15px}
+.training-page .rep-input{font-size:16px;padding:7px 4px}
+.training-page .sets-grid{gap:6px}
+.training-page .exercise-card-actions{gap:5px;margin-top:8px}
+.training-page .mini-button{padding:7px 8px;font-size:10px;border-radius:8px}
+.training-page .suggestion-chip{padding:5px 7px;margin-bottom:7px;font-size:10px}
+.workout-notes-card{padding:12px;margin-top:10px}
+.workout-notes{resize:vertical;min-height:72px;line-height:1.4}
+.notes-label{font-size:12px!important;font-weight:750;color:#e2e8ef!important}
+.history-session-notes{background:#101720;border:1px solid #293644;border-radius:10px;padding:10px;margin:10px 0;font-size:12px}
+.history-session-notes b{font-size:11px;color:#a9b5c2}
+.history-session-notes p{margin:5px 0 0;white-space:pre-wrap;line-height:1.45}
