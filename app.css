@@ -232,3 +232,35 @@ h3{font-size:15px;margin:0;font-weight:800}
 .training-page .exercise-more-actions[open] .exercise-more-actions-panel{grid-column:1/-1;grid-row:auto}
 .training-page .exercise-more-actions-panel .mini-button{font-size:11px}
 @media(max-width:360px){.training-page .exercise-card-actions{grid-template-columns:.9fr 1.25fr .8fr;gap:4px}.training-page .exercise-card-actions>.mini-button,.training-page .exercise-more-actions summary{font-size:10px;padding:7px 3px}}
+
+/* Progress page: historical trends instead of last-session-only bars */
+.progress-page .section-intro{font-size:13px;line-height:1.45;color:var(--muted,#9ba8b7);margin:8px 2px 14px}
+.progress-page .progress-goal h2,.progress-page .pullup-progress h2{margin:5px 0 8px}
+.progress-page .pullup-summary,.progress-page .progress-session-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0}
+.progress-page .pullup-summary>div,.progress-page .progress-session-stats>div{display:flex;flex-direction:column;gap:5px;background:var(--panel-2,#111923);border:1px solid var(--line,#293644);border-radius:12px;padding:11px;min-width:0}
+.progress-page .pullup-summary b,.progress-page .progress-session-stats b{font-size:17px}
+.progress-page .pullup-summary small,.progress-page .progress-session-stats small{font-size:11px;color:var(--muted,#9ba8b7)}
+.progress-page .trend-title{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;font-weight:750;margin:14px 0 7px}
+.progress-page .trend-title span{font-size:10px;font-weight:500;color:var(--muted,#9ba8b7);text-align:right}
+.progress-page .trend-chart{display:flex;align-items:flex-end;gap:5px;min-height:105px;overflow-x:auto;padding:8px 0 3px}
+.progress-page .trend-point{flex:1;min-width:35px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px}
+.progress-page .trend-point>b{font-size:10px;font-weight:700;white-space:nowrap}
+.progress-page .trend-bar-wrap{height:76px;display:flex;align-items:flex-end;width:100%;justify-content:center}
+.progress-page .trend-bar{width:min(25px,72%);min-height:8px;border-radius:6px 6px 2px 2px;background:#5d91b7}
+.progress-page .trend-bar.assistance{background:#64b88d}
+.progress-page .trend-point small{font-size:9px;color:var(--muted,#9ba8b7);white-space:nowrap}
+.progress-page .trend-caption,.progress-page .progress-empty{font-size:11px;line-height:1.4;color:var(--muted,#9ba8b7);margin:8px 0}
+.progress-page .progress-exercise{padding:0;overflow:hidden}
+.progress-page .progress-ex-summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px;cursor:pointer;list-style:none}
+.progress-page .progress-ex-summary::-webkit-details-marker{display:none}
+.progress-page .progress-ex-summary h3{margin:0 0 4px;font-size:16px}
+.progress-page .progress-summary-value{font-size:16px;font-weight:800;text-align:right;white-space:nowrap}
+.progress-page .progress-summary-value small{display:block;font-size:10px;color:var(--muted,#9ba8b7);font-weight:500}
+.progress-page .progress-exercise[open]{padding:0 13px 12px}
+.progress-page .progress-exercise[open] .progress-ex-summary{padding:13px 0 8px}
+.progress-page .progress-consistency .consistency-grid{display:flex;gap:7px;align-items:flex-end;justify-content:space-between;margin-top:14px}
+.progress-page .consistency-week{display:flex;flex:1;min-width:0;flex-direction:column;align-items:center;gap:5px}
+.progress-page .consistency-week>b{font-size:12px}
+.progress-page .consistency-bar-wrap{height:50px;display:flex;align-items:flex-end;width:100%;justify-content:center}
+.progress-page .consistency-bar{width:65%;max-width:28px;background:#5d91b7;border-radius:5px 5px 2px 2px}
+.progress-page .consistency-week small{font-size:9px;color:var(--muted,#9ba8b7)}
