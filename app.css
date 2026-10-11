@@ -340,3 +340,14 @@ h3{font-size:15px;margin:0;font-weight:800}
 .progress-page .combined-legend>span{display:inline-block;width:17px;height:3px;border-radius:2px;background:#ffd166}
 .progress-page .combined-legend>span.assist{background:#67e8ad}
 .progress-page .combined-legend>span.reps-key{height:9px;width:9px;border-radius:2px;background:#5d91b7}
+
+/* Actual overlay: SVG line is positioned directly over the repetition bar tracks */
+.progress-page .combined-trend{position:relative;display:flex;gap:12px;align-items:stretch;overflow-x:auto;isolation:isolate;padding:68px 0 5px}
+.progress-page .combined-weight-line{position:absolute;z-index:5;top:83px;left:0;display:block;pointer-events:none;overflow:visible}
+.progress-page .combined-session{position:relative;z-index:1;flex:0 0 72px;min-width:72px;display:flex;flex-direction:column;align-items:center;gap:6px}
+.progress-page .combined-weight{display:none!important}
+.progress-page .combined-reps{display:flex;align-items:flex-end;justify-content:center;gap:4px;width:100%;min-height:76px}
+.progress-page .combined-set{width:18px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px}
+.progress-page .combined-set>b{font-size:10px;white-space:nowrap}
+.progress-page .combined-rep-track{height:60px;width:100%;display:flex;align-items:flex-end;justify-content:center}
+.progress-page .combined-rep-bar{width:100%;background:#5d91b7;border-radius:4px 4px 1px 1px;min-height:6px}
