@@ -275,3 +275,19 @@ h3{font-size:15px;margin:0;font-weight:800}
 .progress-page .trend-set .trend-bar{width:100%;max-width:none}
 .progress-page .trend-set>small{font-size:8px;color:var(--muted,#9ba8b7)}
 .progress-page .trend-session-date{font-size:10px;color:var(--muted,#9ba8b7);white-space:nowrap}
+
+/* Combined per-session chart: actual weight above the set bars, shared date below */
+.progress-page .combined-trend{display:flex;gap:12px;align-items:stretch;overflow-x:auto;padding:8px 0 5px}
+.progress-page .combined-session{flex:0 0 72px;min-width:72px;display:flex;flex-direction:column;align-items:center;gap:6px}
+.progress-page .combined-weight{width:100%;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:58px;justify-content:flex-end}
+.progress-page .combined-weight>b{font-size:10px;font-weight:750;white-space:nowrap}
+.progress-page .combined-weight-track{height:36px;display:flex;align-items:flex-end;justify-content:center;width:100%}
+.progress-page .combined-weight-bar{width:25px;max-height:34px;min-height:8px;background:#5d91b7;border-radius:5px 5px 2px 2px}
+.progress-page .combined-weight-bar.assistance{background:#64b88d}
+.progress-page .combined-reps{display:flex;align-items:flex-end;justify-content:center;gap:4px;width:100%;min-height:76px}
+.progress-page .combined-set{width:18px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px}
+.progress-page .combined-set>b{font-size:10px;white-space:nowrap}
+.progress-page .combined-rep-track{height:60px;width:100%;display:flex;align-items:flex-end;justify-content:center}
+.progress-page .combined-rep-bar{width:100%;background:#5d91b7;border-radius:4px 4px 1px 1px;min-height:6px}
+.progress-page .combined-set>small{font-size:8px;color:var(--muted,#9ba8b7)}
+.progress-page .combined-date{font-size:10px;color:var(--muted,#9ba8b7);white-space:nowrap;margin-top:2px}
