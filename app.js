@@ -185,17 +185,23 @@ function progressChart(entries,metric,assistance){
 }
 function progressCombinedChart(entries,kind){
  if(!entries.length)return '<div class="progress-empty">Noch keine ausreichend dokumentierten Daten für diese Übung.</div>';
- const all=entries.flatMap(h=>h.reps.filter(v=>Number.isFinite(v)));
- const maxReps=Math.max(12,...all),weights=entries.map(h=>progressNumber(h.weight)).filter(v=>v!==null),maxWeight=Math.max(1,...weights);
- let out='<div class="combined-trend" role="img" aria-label="Gewicht und Wiederholungen pro Trainingseinheit">';
- entries.forEach(h=>{
-  const w=progressNumber(h.weight),label=String(h.weight||"–")+(kind==="assistance"?" Unterstützung":"");
-  const wh=w===null?8:Math.max(8,Math.round(w/maxWeight*34));
-  out+='<div class="combined-session"><div class="combined-weight"><b>'+esc(label)+'</b><div class="combined-weight-track"><div class="combined-weight-bar '+(kind==="assistance"?"assistance":"")+'" style="height:'+wh+'px"></div></div></div><div class="combined-reps">';
-  h.reps.forEach((v,i)=>{const bh=Math.max(6,Math.round(v/maxReps*60));out+='<div class="combined-set"><b>'+esc(String(v))+'</b><div class="combined-rep-track"><div class="combined-rep-bar" style="height:'+bh+'px"></div></div><small>S'+(i+1)+'</small></div>';});
+ const reps=entries.flatMap(h=>h.reps.filter(v=>Number.isFinite(v))),maxReps=Math.max(12,...reps);
+ const weights=entries.map(h=>progressNumber(h.weight)),valid=weights.filter(v=>v!==null);
+ const minW=Math.min(0,...valid),maxW=Math.max(1,...valid),range=maxW-minW||1,step=84,width=entries.length*step-12;
+ const coords=weights.map((v,i)=>({x:i*step+36,y:42-(v===null?0:(v-minW)/range*28),v}));
+ const points=coords.filter(p=>p.v!==null).map(p=>p.x+','+p.y).join(' ');
+ let out='<div class="combined-chart-shell"><div class="combined-trend" role="img" aria-label="Gewicht und Wiederholungen pro Trainingseinheit">';
+ out+='<svg class="combined-weight-line" viewBox="0 0 '+width+' 48" width="'+width+'" height="48" aria-hidden="true"><polyline points="'+points+'" fill="none" stroke="'+(kind==="assistance"?"#67e8ad":"#ffd166")+'" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>';
+ coords.forEach(p=>{if(p.v!==null)out+='<circle cx="'+p.x+'" cy="'+p.y+'" r="5" fill="'+(kind==="assistance"?"#67e8ad":"#ffd166")+'" stroke="#101720" stroke-width="2"/>';});
+ out+='</svg>';
+ entries.forEach((h,i)=>{
+  const label=weights[i]===null?"–":String(h.weight||"–");
+  out+='<div class="combined-session"><div class="combined-weight"><b>'+esc(label)+'</b></div><div class="combined-reps">';
+  h.reps.forEach((v,k)=>{const bh=Math.max(6,Math.round(v/maxReps*60));out+='<div class="combined-set"><b>'+esc(String(v))+'</b><div class="combined-rep-track"><div class="combined-rep-bar" style="height:'+bh+'px"></div></div><small>S'+(k+1)+'</small></div>';});
   out+='</div><small class="combined-date">'+esc(h.workout.date.slice(0,5))+'</small></div>';
  });
- return out+'</div>';
+ out+='</div><div class="combined-legend"><span class="'+(kind==="assistance"?"assist":"weight")+'"></span><small>'+(kind==="assistance"?"Unterstützung (weniger ist besser)":"Tatsächliches Gewicht")+'</small><span class="reps-key"></span><small>Wiederholungen pro Satz</small></div></div>';
+ return out;
 }
 function progressNumber(value){const match=String(value||"").replace(",",".").match(/-?\d+(?:\.\d+)?/);if(!match)return null;const n=Number(match[0]);return Number.isFinite(n)?n:null}
 function progress(){
