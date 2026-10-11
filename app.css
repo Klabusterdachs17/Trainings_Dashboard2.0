@@ -222,3 +222,13 @@ h3{font-size:15px;margin:0;font-weight:800}
 .training-page .exercise-more-actions[open] summary:after{content:"−"}
 .training-page .exercise-more-actions-panel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding-top:7px}
 .training-page .exercise-more-actions-panel .mini-button{min-width:0;min-height:40px;padding:8px 6px;font-size:11px;line-height:1.2;overflow-wrap:anywhere}
+
+/* Three compact actions on one row: done, skip, more */
+.training-page .exercise-card-actions{display:grid;grid-template-columns:1fr 1.25fr .9fr;gap:6px;margin-top:10px}
+.training-page .exercise-card-actions>.mini-button{width:100%;min-width:0;min-height:42px;padding:8px 4px;font-size:11px;line-height:1.15;overflow-wrap:anywhere}
+.training-page .exercise-more-actions{grid-column:auto;display:contents}
+.training-page .exercise-more-actions summary{grid-column:auto;grid-row:auto;min-width:0;min-height:42px;padding:8px 4px;font-size:11px;white-space:nowrap}
+.training-page .exercise-more-actions summary:after{margin-left:4px}
+.training-page .exercise-more-actions[open] .exercise-more-actions-panel{grid-column:1/-1;grid-row:auto}
+.training-page .exercise-more-actions-panel .mini-button{font-size:11px}
+@media(max-width:360px){.training-page .exercise-card-actions{grid-template-columns:.9fr 1.25fr .8fr;gap:4px}.training-page .exercise-card-actions>.mini-button,.training-page .exercise-more-actions summary{font-size:10px;padding:7px 3px}}
