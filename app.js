@@ -183,6 +183,20 @@ function progressChart(entries,metric,assistance){
  out+='<div class="trend-point"><b>'+esc(value)+'</b><div class="trend-bar-wrap"><div class="trend-bar '+(assistance?"assistance":"")+'" style="height:'+height+'px"></div></div><small>'+esc(h.workout.date.slice(0,5))+'</small></div>';});
  return out+'</div>';
 }
+function progressCombinedChart(entries,kind){
+ if(!entries.length)return '<div class="progress-empty">Noch keine ausreichend dokumentierten Daten für diese Übung.</div>';
+ const all=entries.flatMap(h=>h.reps.filter(v=>Number.isFinite(v)));
+ const maxReps=Math.max(12,...all),weights=entries.map(h=>progressNumber(h.weight)).filter(v=>v!==null),maxWeight=Math.max(1,...weights);
+ let out='<div class="combined-trend" role="img" aria-label="Gewicht und Wiederholungen pro Trainingseinheit">';
+ entries.forEach(h=>{
+  const w=progressNumber(h.weight),label=String(h.weight||"–")+(kind==="assistance"?" Unterstützung":"");
+  const wh=w===null?8:Math.max(8,Math.round(w/maxWeight*34));
+  out+='<div class="combined-session"><div class="combined-weight"><b>'+esc(label)+'</b><div class="combined-weight-track"><div class="combined-weight-bar '+(kind==="assistance"?"assistance":"")+'" style="height:'+wh+'px"></div></div></div><div class="combined-reps">';
+  h.reps.forEach((v,i)=>{const bh=Math.max(6,Math.round(v/maxReps*60));out+='<div class="combined-set"><b>'+esc(String(v))+'</b><div class="combined-rep-track"><div class="combined-rep-bar" style="height:'+bh+'px"></div></div><small>S'+(i+1)+'</small></div>';});
+  out+='</div><small class="combined-date">'+esc(h.workout.date.slice(0,5))+'</small></div>';
+ });
+ return out+'</div>';
+}
 function progressNumber(value){const match=String(value||"").replace(",",".").match(/-?\d+(?:\.\d+)?/);if(!match)return null;const n=Number(match[0]);return Number.isFinite(n)?n:null}
 function progress(){
  const list=sortedWorkouts(),sets=list.reduce((sum,w)=>sum+w.items.reduce((n,it)=>n+it.reps.filter(x=>String(x).trim()!=="").length,0),0);
@@ -210,8 +224,7 @@ function progress(){
   const label=ex.kind==="assistance"?"Unterstützung":(ex.kind==="bodyweight"?"Körpergewicht":"Gewicht");
   out+='<details class="card progress-exercise"><summary class="progress-ex-summary"><div><h3>'+esc(ex.name)+'</h3><div class="meta">Ziel '+ex.minReps+'–'+ex.maxReps+' Wdh. · '+label+'</div></div><span class="progress-summary-value">'+esc(latest?latest.weight:ex.weight||"–")+'<small>zuletzt</small></span></summary>';
   if(latest){out+='<div class="progress-session-stats"><div><span class="muted-label">Letzte Einheit</span><b>'+esc(latest.reps.join(" / "))+'</b><small>'+esc(latest.workout.date)+'</small></div><div><span class="muted-label">Davor</span><b>'+esc(previous?previous.reps.join(" / "):"–")+'</b><small>'+esc(previous?previous.workout.date:"Noch kein Vergleich")+'</small></div></div>';}
-  out+='<div class="trend-title">'+(ex.kind==="assistance"?"Unterstützung über die Zeit":"Gewicht über die Zeit")+' <span>'+hist.length+' Einheiten</span></div>'+progressChart(hist,ex.kind==="bodyweight"?"reps":"weight",ex.kind==="assistance");
-  out+='<div class="trend-title">Wiederholungen je Einheit <span>höchster Satz</span></div>'+progressChart(hist,"reps",false);
+  out+='<div class="trend-title">Gewicht und Sätze je Einheit <span>'+hist.length+' Einheiten</span></div>'+progressCombinedChart(hist,ex.kind);
   if(s)out+='<div class="suggestion-box '+s.kind+'"><span>'+esc(s.message)+'</span><b>'+esc(s.weight)+'</b></div>';
   if(!hist.length)out+='<div class="progress-empty">Noch keine ausreichend dokumentierten Daten für diese Übung.</div>';
   out+='<p class="trend-caption">Es werden bis zu 12 der letzten Einheiten angezeigt. Insgesamt '+completed.length+' Einheiten sind vollständig dokumentiert.</p></details>';
