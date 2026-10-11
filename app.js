@@ -115,7 +115,7 @@ function home(){
 }
 function freshDraft() {
  const p=activePlan();if(!p||!p.exercises.length){alert("Bitte lege unter Mehr zuerst einen Trainingsplan mit mindestens einer Übung an.");return null;}
- const items=p.exercises.map(ex=>{const s=getSuggestion(ex);return {exerciseId:ex.id,name:ex.name,weight:ex.weight||"",kind:ex.kind,minReps:ex.minReps,maxReps:ex.maxReps,increaseStep:ex.increaseStep,decreaseStep:ex.decreaseStep,failuresBeforeDecrease:ex.failuresBeforeDecrease,reps:Array(todaySetCount(ex)).fill(""),done:false,skipped:false,suggestionText:s?s.message+" · "+s.weight:"",suggestionWeight:s?s.weight:""}});
+ const items=p.exercises.map(ex=>{const s=getSuggestion(ex),previous=exerciseHistory(ex).find(h=>!h.item.skipped&&String(h.item.weight||"").trim()&&(h.item.done||h.reps.length>0));return {exerciseId:ex.id,name:ex.name,weight:previous?previous.item.weight:(ex.weight||""),kind:ex.kind,minReps:ex.minReps,maxReps:ex.maxReps,increaseStep:ex.increaseStep,decreaseStep:ex.decreaseStep,failuresBeforeDecrease:ex.failuresBeforeDecrease,reps:Array(todaySetCount(ex)).fill(""),done:false,skipped:false,suggestionText:s?s.message+" · "+s.weight:"",suggestionWeight:s?s.weight:""}});
  return {id:uid("draft"),planId:p.id,planName:p.name,date:today(),current:0,items:items,planSnapshot:deepCopy(p)};
 }
 function startTraining(){draft=normalizeDraftRecord(get("fitness.draft",null));if(!draft)draft=freshDraft();if(!draft)return;if(!draft.planSnapshot){const p=plans.find(x=>x.id===draft.planId)||activePlan();draft.planSnapshot=p?deepCopy(p):null;}put("fitness.draft",draft);nav("train");render()}
