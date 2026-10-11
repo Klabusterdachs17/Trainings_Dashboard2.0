@@ -291,3 +291,18 @@ h3{font-size:15px;margin:0;font-weight:800}
 .progress-page .combined-rep-bar{width:100%;background:#5d91b7;border-radius:4px 4px 1px 1px;min-height:6px}
 .progress-page .combined-set>small{font-size:8px;color:var(--muted,#9ba8b7)}
 .progress-page .combined-date{font-size:10px;color:var(--muted,#9ba8b7);white-space:nowrap;margin-top:2px}
+
+/* Strong, aligned weight line with concise labels; keep the pull-up chart readable */
+.progress-page .combined-chart-shell{position:relative;min-width:0}
+.progress-page .combined-trend{position:relative;isolation:isolate;padding-top:55px;gap:12px;align-items:stretch;overflow-x:auto}
+.progress-page .combined-weight-line{position:absolute;z-index:2;top:0;left:0;display:block;overflow:visible;pointer-events:none}
+.progress-page .combined-session{position:relative;z-index:1}
+.progress-page .combined-weight{min-height:24px;justify-content:center}
+.progress-page .combined-weight>b{font-size:11px;color:#fff;position:relative;z-index:3;background:var(--panel,#151c25);padding:1px 3px;border-radius:4px}
+.progress-page .combined-weight-bar{display:none}
+.progress-page .combined-weight-track{display:none}
+.progress-page .combined-legend{display:flex;align-items:center;gap:6px 8px;flex-wrap:wrap;margin-top:7px;color:var(--muted,#9ba8b7)}
+.progress-page .combined-legend small{font-size:10px}
+.progress-page .combined-legend>span{display:inline-block;width:17px;height:3px;border-radius:2px;background:#ffcf5c}
+.progress-page .combined-legend>span.assist{background:#70e2ad}
+.progress-page .combined-legend>span.reps-key{height:9px;width:9px;border-radius:2px;background:#5d91b7}
