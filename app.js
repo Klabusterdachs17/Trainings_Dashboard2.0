@@ -342,7 +342,7 @@ function more(){
  out+='</div></div>';});out+='</section><section class="card management-card"><div class="section-head"><div><div class="eyebrow">ZIELE</div><h3>Deine Ziele</h3></div><button class="primary small-primary" data-action="new-goal">+ Neues Ziel</button></div>';
  goals.forEach(g=>{out+='<div class="manage-row"><div class="manage-main"><b>'+esc(g.name)+'</b><span class="meta">'+esc(g.current||"Stand offen")+(g.next?" · als Nächstes "+esc(g.next):"")+'</span></div><div class="manage-actions"><span class="badge '+(g.status==="active"?"active":"")+'">'+(g.status==="active"?"AKTIV":(g.status==="completed"?"ERREICHT":"INAKTIV"))+'</span><button class="mini-button" data-action="edit-goal" data-id="'+esc(g.id)+'">Bearbeiten</button>';
  if(g.status!=="active"&&g.status!=="completed")out+='<button class="mini-button" data-action="activate-goal" data-id="'+esc(g.id)+'">Aktivieren</button>';if(g.status==="active")out+='<button class="mini-button" data-action="complete-goal" data-id="'+esc(g.id)+'">Erreicht ✓</button>';out+='</div></div>';});
- out+='</section><section class="card export-card"><div class="eyebrow">DATEN & CHATGPT</div><h3>Trainingsdaten exportieren</h3><p class="meta">Teile deine Trainingshistorie, Pläne, Ziele und Steigerungsregeln über das Android-Teilen-Menü mit ChatGPT oder lade die JSON-Datei herunter.</p><button class="primary full-width" data-action="share-json">↗ Mit ChatGPT teilen</button><button class="secondary full-width" data-action="export-json">↓ Trainingsdaten als JSON herunterladen</button><div class="note">Beim Teilen öffnet sich das Android-Menü. Wähle dort ChatGPT aus. Die App sendet nichts automatisch an einen Server.</div></section><section class="card info"><b>Datenschutz</b><div class="note" style="margin-top:6px">Die App speichert deine Trainingsdaten lokal im Browser-Speicher dieses Geräts. Die Exportdatei enthält persönliche Trainingsinformationen – teile sie nur dort, wo du möchtest.</div></section></div>';return out;
+ out+='</section><section class="card export-card"><div class="eyebrow">DATEN & CHATGPT</div><h3>Trainingsdaten exportieren</h3><p class="meta">Teile einen Analyseauftrag mit deinen Trainingsdaten als Text über das Android-Teilen-Menü oder lade die vollständige JSON-Datei herunter.</p><button class="primary full-width" data-action="share-json">↗ Mit ChatGPT teilen</button><button class="secondary full-width" data-action="export-json">↓ Trainingsdaten als JSON herunterladen</button><div class="note">Wähle ChatGPT im Teilen-Menü und sende den vorbereiteten Text dort ab. Falls Teilen nicht verfügbar ist, kopiert die App den Text. Nichts wird automatisch versendet.</div></section><section class="card info"><b>Datenschutz</b><div class="note" style="margin-top:6px">Die App speichert deine Trainingsdaten lokal im Browser-Speicher dieses Geräts. Die Exportdatei enthält persönliche Trainingsinformationen – teile sie nur dort, wo du möchtest.</div></section></div>';return out;
 }
 function makeBlankExercise(){return normalizeExercise({id:uid("exercise"),name:"Neue Übung",weight:"",kind:"load",minReps:8,maxReps:12,setsSun:3,setsWed:3,increaseStep:2.5,decreaseStep:2.5,failuresBeforeDecrease:2})}
 function newPlan(){planDraft={id:uid("plan"),name:"Neuer Trainingsplan",from:today(),to:null,active:false,archived:false,exercises:[makeBlankExercise()]};nav("plan-edit")}
@@ -389,6 +389,23 @@ function activateGoal(id){const g=goals.find(x=>x.id===id);if(!g||g.status==="co
 function completeGoal(id){const g=goals.find(x=>x.id===id);if(!g)return;if(!confirm("Ziel „"+g.name+"“ als erreicht markieren?"))return;goals=goals.map(x=>x.id===id?Object.assign({},x,{status:"completed"}):(x.status==="active"?Object.assign({},x,{status:"inactive"}):x));localStorage.removeItem("fitness.activeGoal");setGoals();render()}
 function exportPayload(){return {schemaVersion:1,exportedAt:new Date().toISOString(),application:"Fitness Trainingstagebuch",activePlanId:(activePlan()||{}).id||null,activeGoalId:(activeGoal()||{}).id||null,plans:plans.map(normalizePlan),goals:goals.map(normalizeGoal),workouts:sortedWorkouts()}}
 function exportFilename(){return "fitness-trainingsdaten-"+new Date().toISOString().slice(0,10)+".json"}
+function chatGPTShareText(){
+ const payload=exportPayload();
+ const compact={schemaVersion:payload.schemaVersion,exportedAt:payload.exportedAt,application:payload.application,activePlanId:payload.activePlanId,activeGoalId:payload.activeGoalId,plans:payload.plans,goals:payload.goals,workouts:payload.workouts.map(w=>({date:w.date,planName:w.planName,trainingVariant:w.trainingVariant,notes:w.notes,items:w.items.map(it=>({exerciseId:it.exerciseId,name:it.name,weight:it.weight,reps:it.reps,done:it.done,skipped:it.skipped,kind:it.kind,minReps:it.minReps,maxReps:it.maxReps,isReplacement:it.isReplacement,plannedExerciseName:it.plannedExerciseName||undefined}))}))};
+ return "Bitte analysiere meinen Trainingsverlauf. Fasse Fortschritte und mögliche Plateaus zusammen und nenne konkrete, vorsichtige Vorschläge für die nächsten Einheiten. Ersatzübungen sind getrennte Übungen. Nutze nur die folgenden Daten.\n\nTRAININGSDATEN (JSON):\n"+JSON.stringify(compact);
+}
+async function shareChatGPT(){
+ const text=chatGPTShareText();
+ if(navigator.share){
+  try{await navigator.share({title:"Trainingsdaten mit ChatGPT teilen",text:text});return;}
+  catch(error){if(error&&error.name==="AbortError")return;console.warn("Textfreigabe wurde nicht abgeschlossen.",error);}
+ }
+ if(navigator.clipboard&&typeof navigator.clipboard.writeText==="function"){
+  try{await navigator.clipboard.writeText(text);alert("Analyseauftrag und Trainingsdaten wurden kopiert. Öffne ChatGPT, füge den Text ein und sende ihn.");return;}
+  catch(error){console.warn("Trainingsdaten konnten nicht in die Zwischenablage kopiert werden.",error);}
+ }
+ alert("Textfreigabe und Kopieren sind hier nicht verfügbar. Die JSON-Datei wird stattdessen heruntergeladen.");exportJSON();
+}
 function exportJSON(){
  const blob=new Blob([JSON.stringify(exportPayload(),null,2)],{type:"application/json;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=exportFilename();document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
@@ -412,7 +429,7 @@ function handleAction(b){
  else if(a==="save-weight-default")saveWeightAsDefault(i)
  else if(a==="edit-workout"){editingWorkoutId=id;nav("history-edit");}else if(a==="delete-workout")deleteWorkout(id);else if(a==="save-history-edit")saveHistoryEdit(id);else if(a==="go-history")nav("history");
  else if(a==="new-plan")newPlan();else if(a==="edit-plan")editPlan(id);else if(a==="activate-plan")activatePlan(id);else if(a==="archive-plan")archivePlan(id);else if(a==="delete-plan")deletePlan(id);else if(a==="add-plan-exercise")addPlanExercise();else if(a==="remove-plan-exercise")removePlanExercise(i);else if(a==="plan-ex-up")movePlanExercise(i,-1);else if(a==="plan-ex-down")movePlanExercise(i,1);else if(a==="save-plan")savePlan();
- else if(a==="go-more"){planDraft=null;goalDraft=null;nav("more");}else if(a==="new-goal")newGoal();else if(a==="edit-goal")editGoal(id);else if(a==="edit-active-goal"){const g=activeGoal();if(g)editGoal(g.id);else newGoal();}else if(a==="save-goal")saveGoal();else if(a==="activate-goal")activateGoal(id);else if(a==="complete-goal")completeGoal(id);else if(a==="go-goals"||a==="go-plans")nav("more");else if(a==="share-json")shareJSON();else if(a==="export-json")exportJSON();
+ else if(a==="go-more"){planDraft=null;goalDraft=null;nav("more");}else if(a==="new-goal")newGoal();else if(a==="edit-goal")editGoal(id);else if(a==="edit-active-goal"){const g=activeGoal();if(g)editGoal(g.id);else newGoal();}else if(a==="save-goal")saveGoal();else if(a==="activate-goal")activateGoal(id);else if(a==="complete-goal")completeGoal(id);else if(a==="go-goals"||a==="go-plans")nav("more");else if(a==="share-json")shareChatGPT();else if(a==="export-json")exportJSON();
 }
 document.getElementById("app").addEventListener("click",event=>{const b=event.target.closest("[data-action]");if(b&&!b.disabled)handleAction(b)});
 document.getElementById("app").addEventListener("input",event=>{
@@ -422,5 +439,5 @@ window.addEventListener("hashchange",render);
 if(!location.hash)location.hash="home";
 render();
 if(draft&&draft.restTimerEndAt){restTimerInterval=setInterval(updateRestTimer,1000);updateRestTimer();}
-if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js?v=18",{scope:"./"}).catch(error=>console.warn("Service Worker konnte nicht registriert werden.",error));
+if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js?v=19",{scope:"./"}).catch(error=>console.warn("Service Worker konnte nicht registriert werden.",error));
 
