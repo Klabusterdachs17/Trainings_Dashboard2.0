@@ -42,21 +42,22 @@ function normalizeWorkoutItem(raw,index,planSnapshot) {
  if(Array.isArray(raw)){const name=String(raw[0]||"Übung"),pe=(planSnapshot&&planSnapshot.exercises||[]).find(x=>x.name===name);return {exerciseId:pe?pe.id:"legacy-"+name.toLowerCase().replace(/[^a-z0-9]+/g,"-"),name,weight:String(raw[1]||""),reps:Array.isArray(raw[2])?raw[2].map(x=>String(x)):[],skipped:false,done:Array.isArray(raw[2])&&raw[2].some(x=>String(x).trim()!==""),kind:pe?pe.kind:(/unterstützung/i.test(String(raw[1]||""))?"assistance":"load"),minReps:pe?pe.minReps:8,maxReps:pe?pe.maxReps:12,increaseStep:pe?pe.increaseStep:2.5,decreaseStep:pe?pe.decreaseStep:2.5,failuresBeforeDecrease:pe?pe.failuresBeforeDecrease:2};}
  const x=raw||{};return {exerciseId:String(x.exerciseId||"legacy-"+String(x.name||"").toLowerCase().replace(/[^a-z0-9]+/g,"-")),name:String(x.name||"Übung"),weight:String(x.weight||""),reps:Array.isArray(x.reps)?x.reps.map(v=>v===null||v===undefined?"":String(v)):[],skipped:!!x.skipped,done:!!x.done,kind:x.kind||(/unterstützung/i.test(String(x.weight||""))?"assistance":"load"),minReps:Number(x.minReps||8),maxReps:Number(x.maxReps||12),increaseStep:Number(x.increaseStep===undefined?2.5:x.increaseStep),decreaseStep:Number(x.decreaseStep===undefined?2.5:x.decreaseStep),failuresBeforeDecrease:Number(x.failuresBeforeDecrease||2),suggestionText:String(x.suggestionText||""),suggestionWeight:String(x.suggestionWeight||"")};
 }
-function normalizeWorkout(raw) {const w=raw||{},p=plans.find(x=>x.id===w.planId),snap=w.planSnapshot||(p?{id:p.id,name:p.name,exercises:p.exercises}:null);return {id:String(w.id||uid("workout")),date:String(w.date||today()),planId:String(w.planId||"unknown"),planName:String(w.planName||(snap&&snap.name)||(p&&p.name)||"Trainingsplan (historisch)"),notes:String(w.notes||""),planSnapshot:snap,items:Array.isArray(w.items)?w.items.map((x,i)=>normalizeWorkoutItem(x,i,snap)):[]}}
+function normalizeWorkout(raw) {const w=raw||{},p=plans.find(x=>x.id===w.planId),snap=w.planSnapshot||(p?{id:p.id,name:p.name,exercises:p.exercises}:null);return {id:String(w.id||uid("workout")),date:String(w.date||today()),planId:String(w.planId||"unknown"),planName:String(w.planName||(snap&&snap.name)||(p&&p.name)||"Trainingsplan (historisch)"),trainingVariant:w.trainingVariant==="full"||w.trainingVariant==="short"?w.trainingVariant:null,notes:String(w.notes||""),planSnapshot:snap,items:Array.isArray(w.items)?w.items.map((x,i)=>normalizeWorkoutItem(x,i,snap)):[]}}
 function normalizeDraftRecord(raw) {
  if(!raw||!Array.isArray(raw.items))return null;
  const p=plans.find(x=>x.id===raw.planId),snap=raw.planSnapshot||(p?deepCopy(p):null);
+ const trainingVariant=raw.trainingVariant==="full"||raw.trainingVariant==="short"?raw.trainingVariant:null;
  const sourceExercises=(snap&&snap.exercises)||((p&&p.exercises)||[]);
  const items=raw.items.map((item,i)=>{
   const source=normalizeWorkoutItem(item,i,snap);
   const ex=sourceExercises.find(e=>e.id===source.exerciseId)||sourceExercises.find(e=>e.name===source.name);
   if(ex){source.kind=ex.kind;source.minReps=ex.minReps;source.maxReps=ex.maxReps;source.increaseStep=ex.increaseStep;source.decreaseStep=ex.decreaseStep;source.failuresBeforeDecrease=ex.failuresBeforeDecrease;source.name=(!item.name||item.name==="Übung")?ex.name:source.name;}
-  if(!source.reps.length)source.reps=Array(todaySetCount(ex||{setsSun:3,setsWed:3})).fill("");
+  if(!source.reps.length)source.reps=Array(todaySetCount(ex||{setsSun:3,setsWed:3},trainingVariant||recommendedTrainingVariant())).fill("");
   if(!source.weight&&ex)source.weight=ex.weight||"";
   if(!source.done&&!source.skipped)source.done=source.reps.some(v=>String(v).trim()!=="");
   return source;
  });
- return {id:String(raw.id||uid("draft")),planId:String(raw.planId||(p&&p.id)||"unknown"),planName:String(raw.planName||(snap&&snap.name)||(p&&p.name)||"Trainingsplan"),date:String(raw.date||today()),current:Number(raw.current||0),notes:String(raw.notes||""),items:items,planSnapshot:snap};
+ return {id:String(raw.id||uid("draft")),planId:String(raw.planId||(p&&p.id)||"unknown"),planName:String(raw.planName||(snap&&snap.name)||(p&&p.name)||"Trainingsplan"),trainingVariant:trainingVariant,date:String(raw.date||today()),current:Number(raw.current||0),notes:String(raw.notes||""),items:items,planSnapshot:snap};
 }
 function migrate() {
  if(!localStorage.getItem("fitness.workouts"))put("fitness.workouts",SEED);
@@ -79,7 +80,8 @@ if(draft)put("fitness.draft",draft);
 let planDraft=null,goalDraft=null,editingWorkoutId=null;
 function activePlan(){return plans.find(p=>p.active&&!p.archived)||plans.find(p=>!p.archived)||plans[0]||null}
 function activeGoal(){const id=localStorage.getItem("fitness.activeGoal");return goals.find(g=>g.id===id&&g.status==="active")||goals.find(g=>g.status==="active")||null}
-function todaySetCount(ex){return new Date().getDay()===3?Number(ex.setsWed||3):Number(ex.setsSun||3)}
+function recommendedTrainingVariant(date=new Date()){const day=date.getDay();return day===0||day===6?"full":"short"}
+function todaySetCount(ex,variant){return variant==="short"?Number(ex.setsWed||3):Number(ex.setsSun||3)}
 function route(){return location.hash.slice(1)||"home"}
 function nav(to){location.hash=to}
 function setPlans(){put("fitness.plans",plans)}
@@ -100,7 +102,7 @@ function getSuggestion(exercise) {
  return null;
 }
 function render(){const app=document.getElementById("app");app.innerHTML=view(route());document.querySelectorAll(".bottom-nav button").forEach(b=>{b.classList.toggle("active",b.dataset.route===route());b.onclick=()=>nav(b.dataset.route)});}
-function view(r){if(r==="home")return home();if(r==="train")return train();if(r==="history")return historyView();if(r==="history-edit")return historyEditView();if(r==="progress")return progress();if(r==="more")return more();if(r==="plan-edit")return planEditView();if(r==="goal-edit")return goalEditView();return home()}
+function view(r){if(r==="home")return home();if(r==="training-choice")return trainingChoice();if(r==="train")return train();if(r==="history")return historyView();if(r==="history-edit")return historyEditView();if(r==="progress")return progress();if(r==="more")return more();if(r==="plan-edit")return planEditView();if(r==="goal-edit")return goalEditView();return home()}
 function home(){
  const g=activeGoal(),p=activePlan();let out='<div class="app home-page"><header><h1>🏋️ Fitness</h1><div class="sub">Dein Training. Dein Fortschritt.</div></header><button class="primary start-top" data-action="start-training">▶ Neues Training starten</button>';
  if(g){const road=g.roadmap.length?g.roadmap:[g.current,g.next,g.name].filter(Boolean);let idx=road.findIndex(x=>x.toLowerCase()===String(g.current).toLowerCase());if(idx<0)idx=0;const pct=road.length>1?Math.round((idx+0.25)/(road.length-1)*100):0;
@@ -113,17 +115,20 @@ function home(){
  else out+='<div class="card"><p>Dein aktiver Trainingsplan hat noch keine Übungen.</p><button class="secondary" data-action="new-plan">Plan erstellen</button></div>';
  out+='<div class="safety-note">Deine Trainingsdaten bleiben lokal auf diesem Gerät, bis du sie selbst exportierst.</div></div>';return out;
 }
-function freshDraft() {
+function trainingChoice(){const recommended=recommendedTrainingVariant(),p=activePlan();return '<div class="app training-choice-page"><header><h2>Welches Training möchtest du heute machen?</h2><div class="sub">Dein aktiver Plan und deine Fortschrittsdaten gelten für beide Varianten.</div></header><section class="card training-choice-card"><button class="training-choice-option '+(recommended==="full"?"recommended":"")+'" data-action="choose-training" data-variant="full"><span><b>Vollständiges Training</b><small>Alle Übungen mit der regulären Satzanzahl.</small></span><strong>'+ (recommended==="full"?"Empfohlen":"Auswählen")+'</strong></button><button class="training-choice-option '+(recommended==="short"?"recommended":"")+'" data-action="choose-training" data-variant="short"><span><b>Verkürztes Training</b><small>Dieselben Übungen mit den reduzierten Satzanzahlen.</small></span><strong>'+ (recommended==="short"?"Empfohlen":"Auswählen")+'</strong></button><div class="note">'+(recommended==="short"?"Werktage empfehlen das verkürzte Training.":"Am Wochenende wird das vollständige Training empfohlen.")+(p?' · Aktiver Plan: '+esc(p.name):"")+'</div><button class="secondary full-width" data-action="back-home">Zurück</button></section></div>'}
+function freshDraft(variant) {
  const p=activePlan();if(!p||!p.exercises.length){alert("Bitte lege unter Mehr zuerst einen Trainingsplan mit mindestens einer Übung an.");return null;}
- const items=p.exercises.map(ex=>{const s=getSuggestion(ex),previous=exerciseHistory(ex).find(h=>!h.item.skipped&&String(h.item.weight||"").trim()&&(h.item.done||h.reps.length>0));return {exerciseId:ex.id,name:ex.name,weight:previous?previous.item.weight:(ex.weight||""),kind:ex.kind,minReps:ex.minReps,maxReps:ex.maxReps,increaseStep:ex.increaseStep,decreaseStep:ex.decreaseStep,failuresBeforeDecrease:ex.failuresBeforeDecrease,reps:Array(todaySetCount(ex)).fill(""),done:false,skipped:false,suggestionText:s?s.message+" · "+s.weight:"",suggestionWeight:s?s.weight:""}});
- return {id:uid("draft"),planId:p.id,planName:p.name,date:today(),current:0,items:items,planSnapshot:deepCopy(p)};
+ const trainingVariant=variant==="short"?"short":"full";
+ const items=p.exercises.map(ex=>{const s=getSuggestion(ex),previous=exerciseHistory(ex).find(h=>!h.item.skipped&&String(h.item.weight||"").trim()&&(h.item.done||h.reps.length>0));return {exerciseId:ex.id,name:ex.name,weight:previous?previous.item.weight:(ex.weight||""),kind:ex.kind,minReps:ex.minReps,maxReps:ex.maxReps,increaseStep:ex.increaseStep,decreaseStep:ex.decreaseStep,failuresBeforeDecrease:ex.failuresBeforeDecrease,reps:Array(todaySetCount(ex,trainingVariant)).fill(""),done:false,skipped:false,suggestionText:s?s.message+" · "+s.weight:"",suggestionWeight:s?s.weight:""}});
+ return {id:uid("draft"),planId:p.id,planName:p.name,trainingVariant:trainingVariant,date:today(),current:0,items:items,planSnapshot:deepCopy(p)};
 }
-function startTraining(){draft=normalizeDraftRecord(get("fitness.draft",null));if(!draft)draft=freshDraft();if(!draft)return;if(!draft.planSnapshot){const p=plans.find(x=>x.id===draft.planId)||activePlan();draft.planSnapshot=p?deepCopy(p):null;}put("fitness.draft",draft);nav("train");render()}
+function startTraining(){draft=normalizeDraftRecord(get("fitness.draft",null));if(draft){if(!draft.planSnapshot){const p=plans.find(x=>x.id===draft.planId)||activePlan();draft.planSnapshot=p?deepCopy(p):null;}put("fitness.draft",draft);nav("train");render();return;}nav("training-choice");render()}
+function chooseTraining(variant){draft=freshDraft(variant);if(!draft)return;put("fitness.draft",draft);nav("train");render()}
 function train(){
  if(!draft)draft=normalizeDraftRecord(get("fitness.draft",null));
  if(!draft||!Array.isArray(draft.items))return '<div class="app"><header><h2>Training</h2><div class="sub">Deine gesamte Einheit auf einen Blick.</div></header><div class="card"><p>Du hast noch keine laufende Trainingseinheit.</p><button class="primary" data-action="start-training">▶ Training starten</button></div></div>';
  const total=draft.items.filter(x=>!x.skipped).length,done=draft.items.filter(x=>x.done&&!x.skipped).length;
- let out='<div class="app training-page"><header><button class="back" data-action="back-home">← Zur Startseite</button><h2>Dein Training</h2><div class="sub">'+esc(draft.planName||"Trainingsplan")+' · '+esc(draft.date)+'</div></header><div class="training-summary"><div><strong>'+done+' / '+total+'</strong><span>Übungen erledigt</span></div><div class="training-progress-track"><div style="width:'+(total?Math.round(done/total*100):0)+'%"></div></div><button class="text-button" data-action="discard-draft">Einheit verwerfen</button></div><div class="training-tip">Gewicht und Wiederholungen werden automatisch zwischengespeichert. Du kannst die Reihenfolge ändern oder Übungen überspringen.</div>';
+ let out='<div class="app training-page"><header><button class="back" data-action="back-home">← Zur Startseite</button><h2>Dein Training</h2><div class="sub">'+esc(draft.planName||"Trainingsplan")+' · '+esc(draft.date)+' · '+(draft.trainingVariant==="short"?"Verkürzte Variante":(draft.trainingVariant==="full"?"Vollständige Variante":"Variante nicht gespeichert"))+'</div></header><div class="training-summary"><div><strong>'+done+' / '+total+'</strong><span>Übungen erledigt</span></div><div class="training-progress-track"><div style="width:'+(total?Math.round(done/total*100):0)+'%"></div></div><button class="text-button" data-action="discard-draft">Einheit verwerfen</button></div><div class="training-tip">Gewicht und Wiederholungen werden automatisch zwischengespeichert. Du kannst die Reihenfolge ändern oder Übungen überspringen.</div>';
  draft.items.forEach((it,i)=>{const status=it.skipped?"skipped":(it.done?"done":"");out+='<section class="exercise-card card '+status+'"><div class="exercise-card-head"><span class="exercise-order">'+(i+1)+'</span><div class="exercise-title"><h3>'+esc(it.name)+'</h3><div class="meta">'+it.minReps+'–'+it.maxReps+' Wiederholungen · '+it.reps.length+' Sätze</div></div><div class="exercise-order-actions"><button class="mini-icon" data-action="move-exercise-up" data-index="'+i+'" '+(i===0?"disabled":"")+' aria-label="Übung nach oben">↑</button><button class="mini-icon" data-action="move-exercise-down" data-index="'+i+'" '+(i===draft.items.length-1?"disabled":"")+' aria-label="Übung nach unten">↓</button></div></div>';
  if(it.suggestionText)out+='<div class="suggestion-chip">↗ '+esc(it.suggestionText)+'</div>';if(it.skipped)out+='<div class="skipped-notice">Diese Übung wird für diese Einheit übersprungen.</div>';
  out+='<div class="sets-grid workout-entry-grid"><label class="field-label weight-entry-label">Gewicht<input class="input workout-input weight-input" data-index="'+i+'" data-field="weight" value="'+esc(it.weight)+'" '+(it.skipped?"disabled":"")+' placeholder="kg" aria-label="Tatsächliches Gewicht oder Unterstützung"></label>';
@@ -134,13 +139,13 @@ function train(){
  out+='<section class="card workout-notes-card"><label class="field-label notes-label" for="workout-notes">Notizen zu dieser Einheit</label><textarea id="workout-notes" class="input workout-notes" rows="3" placeholder="Wie lief das Training? Energie, Stimmung, Beschwerden …">'+esc(draft.notes||"")+'</textarea><div class="note">Wird automatisch gespeichert und später in der Historie angezeigt.</div></section><div class="actions finish-actions"><button class="primary full-width" data-action="finish-workout">Training abschließen</button><div class="note">Nicht markierte Übungen können als teilweise absolvierte Einheit gespeichert werden. Übersprungene Übungen werden nicht als Fehler gewertet.</div></div></div>';return out;
 }
 function syncDraftFromDom(){if(!draft||route()!=="train")return;document.querySelectorAll(".workout-input").forEach(el=>{const i=Number(el.dataset.index);if(!draft.items[i])return;if(el.dataset.field==="weight")draft.items[i].weight=el.value;if(el.dataset.field==="rep")draft.items[i].reps[Number(el.dataset.repIndex)]=el.value;});const notes=document.querySelector(".workout-notes");if(notes)draft.notes=notes.value;put("fitness.draft",draft)}
-function finishWorkout(){syncDraftFromDom();if(!draft||!draft.items.length){alert("Es gibt keine Trainingseinheit zum Speichern.");return;}const open=draft.items.filter(x=>!x.done&&!x.skipped);if(open.length&&!confirm(open.length+" Übung(en) sind noch nicht als erledigt markiert. Möchtest du die Einheit trotzdem als teilweise absolviert speichern?"))return;const w={id:uid("workout"),date:draft.date,planId:draft.planId,planName:draft.planName,notes:String(draft.notes||""),planSnapshot:deepCopy(draft.planSnapshot),items:draft.items.map(x=>deepCopy(x))};workouts=get("fitness.workouts",SEED);workouts.unshift(w);if(!put("fitness.workouts",workouts))return;localStorage.removeItem("fitness.draft");draft=null;nav("history")}
+function finishWorkout(){syncDraftFromDom();if(!draft||!draft.items.length){alert("Es gibt keine Trainingseinheit zum Speichern.");return;}const open=draft.items.filter(x=>!x.done&&!x.skipped);if(open.length&&!confirm(open.length+" Übung(en) sind noch nicht als erledigt markiert. Möchtest du die Einheit trotzdem als teilweise absolviert speichern?"))return;const w={id:uid("workout"),date:draft.date,planId:draft.planId,planName:draft.planName,trainingVariant:draft.trainingVariant==="short"?"short":(draft.trainingVariant==="full"?"full":null),notes:String(draft.notes||""),planSnapshot:deepCopy(draft.planSnapshot),items:draft.items.map(x=>deepCopy(x))};workouts=get("fitness.workouts",SEED);workouts.unshift(w);if(!put("fitness.workouts",workouts))return;localStorage.removeItem("fitness.draft");draft=null;nav("history")}
 function saveWeightAsDefault(index){syncDraftFromDom();const item=draft&&draft.items[index];if(!item||item.skipped)return;const p=plans.find(x=>x.id===draft.planId);if(!p)return;const ex=p.exercises.find(x=>x.id===item.exerciseId)||p.exercises.find(x=>x.name===item.name);if(!ex){alert("Die Übung wurde im Trainingsplan nicht gefunden.");return;}if(!item.weight.trim()){alert("Bitte trage zuerst ein Gewicht ein.");return;}if(!confirm("Das Gewicht „"+item.weight+"“ als Planstandard für „"+item.name+"“ übernehmen?"))return;ex.weight=item.weight.trim();if(draft.planSnapshot){const snap=draft.planSnapshot.exercises.find(x=>x.id===ex.id)||draft.planSnapshot.exercises.find(x=>x.name===ex.name);if(snap)snap.weight=ex.weight;}setPlans();put("fitness.draft",draft);alert("Standardgewicht im Trainingsplan aktualisiert.");render()}
 function discardDraft(){if(!confirm("Die laufende Trainingseinheit wirklich verwerfen? Die bereits eingegebenen Werte gehen verloren."))return;localStorage.removeItem("fitness.draft");draft=null;nav("home")}
 function historyView(){
  const list=sortedWorkouts();let out='<div class="app"><header><h2>Trainingshistorie</h2><div class="sub">Deine absolvierten Einheiten – Fehler lassen sich nachträglich korrigieren.</div></header>';
  if(!list.length)out+='<div class="empty">Noch keine Trainingseinheiten gespeichert.</div>';
- list.forEach(w=>{const n=w.items.filter(x=>x.done&&!x.skipped).length;out+='<section class="card history-card"><div class="history-head"><div><h3>'+esc(w.date)+'</h3><div class="meta">'+esc(w.planName)+' · '+w.items.length+' Übungen</div></div><span class="badge">'+n+' erledigt</span></div><div class="history-exercises">';
+ list.forEach(w=>{const n=w.items.filter(x=>x.done&&!x.skipped).length,variant=w.trainingVariant==="short"?"Verkürzt":(w.trainingVariant==="full"?"Vollständig":"Variante nicht gespeichert");out+='<section class="card history-card"><div class="history-head"><div><h3>'+esc(w.date)+'</h3><div class="meta">'+esc(w.planName)+' · '+w.items.length+' Übungen · '+variant+'</div></div><span class="badge">'+n+' erledigt</span></div><div class="history-exercises">';
  w.items.forEach(it=>{const reps=it.skipped?"übersprungen":(it.reps.filter(x=>String(x).trim()!=="").join(" / ")||"keine Wiederholungen eingetragen");out+='<div class="history-exercise"><span>'+esc(it.name)+'</span><span>'+esc(it.weight||"–")+'</span><b>'+esc(reps)+'</b></div>';});
  out+='</div>'+(w.notes.trim()?'<div class="history-session-notes"><b>Notiz</b><p>'+esc(w.notes)+'</p></div>':'')+'<div class="history-actions"><button class="secondary" data-action="edit-workout" data-id="'+esc(w.id)+'">Bearbeiten</button><button class="danger" data-action="delete-workout" data-id="'+esc(w.id)+'">Löschen</button></div></section>';});
  return out+'</div>';
@@ -188,9 +193,9 @@ function progressCombinedChart(entries,kind){
  const reps=entries.flatMap(h=>h.reps.filter(v=>Number.isFinite(v))),maxReps=Math.max(12,...reps);
  const weights=entries.map(h=>progressNumber(h.weight)),valid=weights.filter(v=>v!==null);
  const minW=valid.length?Math.min(...valid):0,maxW=valid.length?Math.max(...valid):1;
- const range=maxW-minW||1,step=84,width=entries.length*step-12;
+ const range=maxW-minW||1,step=66,width=entries.length*step-6;
  // Y values map to the actual repetition-bar area, not a separate strip above it.
- const coords=weights.map((v,i)=>({x:i*step+36,y:54-(v===null?0:(v-minW)/range*38),v}));
+ const coords=weights.map((v,i)=>({x:i*step+30,y:54-(v===null?0:(v-minW)/range*38),v}));
  const linePoints=coords.filter(p=>p.v!==null).map(p=>p.x+','+p.y).join(' ');
  const lineColor=kind==="assistance"?"#67e8ad":"#ffd166";
  let out='<div class="combined-chart-shell"><div class="combined-trend" role="img" aria-label="Gewichtslinie über den Wiederholungsbalken, je Trainingstag">';
@@ -304,7 +309,7 @@ function exportJSON(){
 }
 function handleAction(b){
  const a=b.dataset.action,id=b.dataset.id,i=Number(b.dataset.index);
- if(a==="start-training")startTraining();else if(a==="back-home")nav("home");else if(a==="finish-workout")finishWorkout();else if(a==="discard-draft")discardDraft();
+ if(a==="start-training")startTraining();else if(a==="choose-training")chooseTraining(b.dataset.variant);else if(a==="back-home")nav("home");else if(a==="finish-workout")finishWorkout();else if(a==="discard-draft")discardDraft();
  else if(a==="toggle-done"){syncDraftFromDom();const x=draft&&draft.items[i];if(x){x.done=!x.done;if(x.done)x.skipped=false;put("fitness.draft",draft);render();}}
  else if(a==="toggle-skipped"){syncDraftFromDom();const x=draft&&draft.items[i];if(x){x.skipped=!x.skipped;if(x.skipped)x.done=false;put("fitness.draft",draft);render();}}
  else if(a==="move-exercise-up"||a==="move-exercise-down"){syncDraftFromDom();const n=i+(a==="move-exercise-up"?-1:1);if(draft&&n>=0&&n<draft.items.length){[draft.items[i],draft.items[n]]=[draft.items[n],draft.items[i]];put("fitness.draft",draft);render();}}
@@ -321,4 +326,4 @@ document.getElementById("app").addEventListener("input",event=>{
 window.addEventListener("hashchange",render);
 if(!location.hash)location.hash="home";
 render();
-if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js?v=14",{scope:"./"}).catch(error=>console.warn("Service Worker konnte nicht registriert werden.",error));
+if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js?v=15",{scope:"./"}).catch(error=>console.warn("Service Worker konnte nicht registriert werden.",error));

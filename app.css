@@ -289,6 +289,14 @@ h3{font-size:15px;margin:0;font-weight:800}
 .progress-page .combined-set>b{font-size:10px;white-space:nowrap}
 .progress-page .combined-rep-track{height:60px;width:100%;display:flex;align-items:flex-end;justify-content:center}
 .progress-page .combined-rep-bar{width:100%;background:#5d91b7;border-radius:4px 4px 1px 1px;min-height:6px}
+
+.training-choice-card{display:grid;gap:10px}
+.training-choice-option{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;text-align:left;padding:15px;border:1px solid var(--line,#293644);border-radius:12px;background:var(--panel-2,#111923);color:var(--text,#eef3f8);cursor:pointer}
+.training-choice-option.recommended{border-color:#5d91b7;box-shadow:0 0 0 1px #5d91b744}
+.training-choice-option span{display:flex;flex-direction:column;gap:5px}
+.training-choice-option b{font-size:15px}
+.training-choice-option small{font-size:12px;line-height:1.4;color:var(--muted,#9ba8b7)}
+.training-choice-option strong{flex:0 0 auto;color:#87c6f0;font-size:11px}
 .progress-page .combined-set>small{font-size:8px;color:var(--muted,#9ba8b7)}
 .progress-page .combined-date{font-size:10px;color:var(--muted,#9ba8b7);white-space:nowrap;margin-top:2px}
 
@@ -351,3 +359,16 @@ h3{font-size:15px;margin:0;font-weight:800}
 .progress-page .combined-set>b{font-size:10px;white-space:nowrap}
 .progress-page .combined-rep-track{height:60px;width:100%;display:flex;align-items:flex-end;justify-content:center}
 .progress-page .combined-rep-bar{width:100%;background:#5d91b7;border-radius:4px 4px 1px 1px;min-height:6px}
+
+/* Final compact chart overrides: dates, bars, and the SVG weight line stay aligned. */
+.progress-page .trend-title{margin:7px 0 3px}
+.progress-page .progress-exercise[open]{padding:0 10px 9px}
+.progress-page .progress-exercise[open] .progress-ex-summary{padding:10px 0 5px}
+.progress-page .combined-trend{gap:6px;padding:50px 0 3px}
+.progress-page .combined-weight-line{top:65px}
+.progress-page .combined-session{flex:0 0 60px;min-width:60px;gap:4px}
+.progress-page .combined-reps{min-height:72px}
+.progress-page .combined-set{width:16px;gap:2px}
+.progress-page .combined-rep-track{height:54px}
+.progress-page .combined-date{margin-top:0}
+.progress-page .combined-legend{margin-top:4px}
