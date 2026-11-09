@@ -222,6 +222,13 @@ h3{font-size:15px;margin:0;font-weight:800}
 .training-page .exercise-more-actions[open] summary:after{content:"−"}
 .training-page .exercise-more-actions-panel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding-top:7px}
 .training-page .exercise-more-actions-panel .mini-button{min-width:0;min-height:40px;padding:8px 6px;font-size:11px;line-height:1.2;overflow-wrap:anywhere}
+.rest-timer-card{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px}
+.rest-timer-card>div:first-child{display:flex;flex-direction:column;gap:3px;min-width:75px}
+.rest-timer-display{font-size:22px;font-variant-numeric:tabular-nums;line-height:1.1}
+.rest-timer-display.finished{color:#9de0b5;font-size:14px}
+.rest-timer-actions{display:flex;justify-content:flex-end;gap:5px;flex-wrap:wrap}
+.rest-timer-actions .mini-button{min-height:34px;padding:6px 8px;font-size:10px}
+@media(max-width:420px){.rest-timer-card{align-items:flex-start;flex-direction:column;gap:8px}.rest-timer-actions{justify-content:flex-start;width:100%}}
 
 /* Three compact actions on one row: done, skip, more */
 .training-page .exercise-card-actions{display:grid;grid-template-columns:1fr 1.25fr .9fr;gap:6px;margin-top:10px}
@@ -372,3 +379,4 @@ h3{font-size:15px;margin:0;font-weight:800}
 .progress-page .combined-rep-track{height:54px}
 .progress-page .combined-date{margin-top:0}
 .progress-page .combined-legend{margin-top:4px}
+

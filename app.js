@@ -30,6 +30,7 @@ const parseRange = text=>{const m=String(text||"8–12").match(/(\d+)\s*[–-]\s
 const parseWeight = value=>{const m=String(value||"").replace(",",".").match(/-?\d+(?:\.\d+)?/);return m?Number(m[0]):null};
 const formatNumber = value=>Number(value.toFixed(2)).toLocaleString("de-DE",{maximumFractionDigits:2});
 const getWeightLabel = (value,kind)=>kind==="assistance"?formatNumber(value)+" kg Unterstützung":formatNumber(value)+" kg";
+let restTimerInterval=null;
 function normalizeExercise(raw,index) {
  const s=raw||{},range=parseRange(s.target||(s.minReps||8)+"–"+(s.maxReps||12)),weight=String(s.weight===undefined?"":s.weight);
  let kind=s.kind||s.loadKind||"";if(!kind)kind=/unterstützung/i.test(weight)?"assistance":(/körpergewicht/i.test(weight)?"bodyweight":"load");
@@ -57,7 +58,7 @@ function normalizeDraftRecord(raw) {
   if(!source.done&&!source.skipped)source.done=source.reps.some(v=>String(v).trim()!=="");
   return source;
  });
- return {id:String(raw.id||uid("draft")),planId:String(raw.planId||(p&&p.id)||"unknown"),planName:String(raw.planName||(snap&&snap.name)||(p&&p.name)||"Trainingsplan"),trainingVariant:trainingVariant,date:String(raw.date||today()),current:Number(raw.current||0),notes:String(raw.notes||""),items:items,planSnapshot:snap};
+ return {id:String(raw.id||uid("draft")),planId:String(raw.planId||(p&&p.id)||"unknown"),planName:String(raw.planName||(snap&&snap.name)||(p&&p.name)||"Trainingsplan"),trainingVariant:trainingVariant,date:String(raw.date||today()),current:Number(raw.current||0),notes:String(raw.notes||""),restTimerEndAt:Number(raw.restTimerEndAt)||null,restTimerSeconds:Number(raw.restTimerSeconds)||90,items:items,planSnapshot:snap};
 }
 function migrate() {
  if(!localStorage.getItem("fitness.workouts"))put("fitness.workouts",SEED);
@@ -101,6 +102,28 @@ function getSuggestion(exercise) {
  if(failures>=exercise.failuresBeforeDecrease&&exercise.decreaseStep>0){const n=weight+(exercise.kind==="assistance"?exercise.decreaseStep:-exercise.decreaseStep);if(n>0)return {kind:"decrease",weight:getWeightLabel(n,exercise.kind),message:exercise.kind==="assistance"?"Etwas mehr Unterstützung vorgeschlagen":"Gewichtsreduzierung vorgeschlagen"};}
  return null;
 }
+function formatRestTimer(){
+ if(!draft||!draft.restTimerEndAt)return "Bereit";
+ const remaining=Math.max(0,Math.ceil((draft.restTimerEndAt-Date.now())/1000));
+ return String(Math.floor(remaining/60)).padStart(2,"0")+":"+String(remaining%60).padStart(2,"0");
+}
+function updateRestTimer(){
+ if(!draft||!draft.restTimerEndAt){clearInterval(restTimerInterval);restTimerInterval=null;return;}
+ if(draft.restTimerEndAt<=Date.now()){
+  draft.restTimerEndAt=null;put("fitness.draft",draft);clearInterval(restTimerInterval);restTimerInterval=null;
+  const display=document.querySelector(".rest-timer-display");if(display){display.textContent="Pause vorbei";display.classList.add("finished");}
+  if(navigator.vibrate)navigator.vibrate(180);return;
+ }
+ const display=document.querySelector(".rest-timer-display");if(display){display.textContent=formatRestTimer();display.classList.remove("finished");}
+}
+function startRestTimer(seconds){
+ if(!draft)return;draft.restTimerSeconds=Math.max(1,Number(seconds)||90);draft.restTimerEndAt=Date.now()+draft.restTimerSeconds*1000;put("fitness.draft",draft);
+ clearInterval(restTimerInterval);updateRestTimer();restTimerInterval=setInterval(updateRestTimer,1000);
+}
+function stopRestTimer(){
+ if(draft){draft.restTimerEndAt=null;put("fitness.draft",draft);}clearInterval(restTimerInterval);restTimerInterval=null;
+ const display=document.querySelector(".rest-timer-display");if(display){display.textContent="Bereit";display.classList.remove("finished");}
+}
 function render(){const app=document.getElementById("app");app.innerHTML=view(route());document.querySelectorAll(".bottom-nav button").forEach(b=>{b.classList.toggle("active",b.dataset.route===route());b.onclick=()=>nav(b.dataset.route)});}
 function view(r){if(r==="home")return home();if(r==="training-choice")return trainingChoice();if(r==="train")return train();if(r==="history")return historyView();if(r==="history-edit")return historyEditView();if(r==="progress")return progress();if(r==="more")return more();if(r==="plan-edit")return planEditView();if(r==="goal-edit")return goalEditView();return home()}
 function home(){
@@ -128,8 +151,8 @@ function train(){
  if(!draft)draft=normalizeDraftRecord(get("fitness.draft",null));
  if(!draft||!Array.isArray(draft.items))return '<div class="app"><header><h2>Training</h2><div class="sub">Deine gesamte Einheit auf einen Blick.</div></header><div class="card"><p>Du hast noch keine laufende Trainingseinheit.</p><button class="primary" data-action="start-training">▶ Training starten</button></div></div>';
  const total=draft.items.filter(x=>!x.skipped).length,done=draft.items.filter(x=>x.done&&!x.skipped).length;
- let out='<div class="app training-page"><header><button class="back" data-action="back-home">← Zur Startseite</button><h2>Dein Training</h2><div class="sub">'+esc(draft.planName||"Trainingsplan")+' · '+esc(draft.date)+' · '+(draft.trainingVariant==="short"?"Verkürzte Variante":(draft.trainingVariant==="full"?"Vollständige Variante":"Variante nicht gespeichert"))+'</div></header><div class="training-summary"><div><strong>'+done+' / '+total+'</strong><span>Übungen erledigt</span></div><div class="training-progress-track"><div style="width:'+(total?Math.round(done/total*100):0)+'%"></div></div><button class="text-button" data-action="discard-draft">Einheit verwerfen</button></div><div class="training-tip">Gewicht und Wiederholungen werden automatisch zwischengespeichert. Du kannst die Reihenfolge ändern oder Übungen überspringen.</div>';
- draft.items.forEach((it,i)=>{const status=it.skipped?"skipped":(it.done?"done":"");out+='<section class="exercise-card card '+status+'"><div class="exercise-card-head"><span class="exercise-order">'+(i+1)+'</span><div class="exercise-title"><h3>'+esc(it.name)+'</h3><div class="meta">'+it.minReps+'–'+it.maxReps+' Wiederholungen · '+it.reps.length+' Sätze</div></div><div class="exercise-order-actions"><button class="mini-icon" data-action="move-exercise-up" data-index="'+i+'" '+(i===0?"disabled":"")+' aria-label="Übung nach oben">↑</button><button class="mini-icon" data-action="move-exercise-down" data-index="'+i+'" '+(i===draft.items.length-1?"disabled":"")+' aria-label="Übung nach unten">↓</button></div></div>';
+ let out='<div class="app training-page"><header><button class="back" data-action="back-home">← Zur Startseite</button><h2>Dein Training</h2><div class="sub">'+esc(draft.planName||"Trainingsplan")+' · '+esc(draft.date)+' · '+(draft.trainingVariant==="short"?"Verkürzte Variante":(draft.trainingVariant==="full"?"Vollständige Variante":"Variante nicht gespeichert"))+'</div></header><div class="training-summary"><div><strong>'+done+' / '+total+'</strong><span>Übungen erledigt</span></div><div class="training-progress-track"><div style="width:'+(total?Math.round(done/total*100):0)+'%"></div></div><button class="text-button" data-action="discard-draft">Einheit verwerfen</button></div><section class="card rest-timer-card"><div><span class="eyebrow">PAUSENTIMER</span><strong class="rest-timer-display" aria-live="polite">'+formatRestTimer()+'</strong></div><div class="rest-timer-actions"><button class="mini-button" data-action="start-rest-timer" data-seconds="60">60 s</button><button class="mini-button" data-action="start-rest-timer" data-seconds="90">90 s</button><button class="mini-button" data-action="start-rest-timer" data-seconds="120">120 s</button><button class="mini-button" data-action="stop-rest-timer">Stopp</button></div></section><div class="training-tip">Gewicht und Wiederholungen werden automatisch zwischengespeichert. Du kannst die Reihenfolge ändern oder Übungen überspringen.</div>';
+ draft.items.forEach((it,i)=>{const status=it.skipped?"skipped":(it.done?"done":"");out+='<section class="exercise-card card '+status+'"><div class="exercise-card-head"><span class="exercise-order">'+(i+1)+'</span><div class="exercise-title"><h3>'+esc(it.name)+'</h3><div class="meta">'+it.minReps+'–'+it.maxReps+' Wiederholungen · '+it.reps.length+' Sätze</div></div><div class="exercise-order-actions"><button class="mini-icon" data-action="fill-previous-reps" data-index="'+i+'" aria-label="Fehlende Satzwerte aus der letzten Einheit übernehmen" title="Fehlende Werte aus letzter Einheit übernehmen">↻</button><button class="mini-icon" data-action="move-exercise-up" data-index="'+i+'" '+(i===0?"disabled":"")+' aria-label="Übung nach oben">↑</button><button class="mini-icon" data-action="move-exercise-down" data-index="'+i+'" '+(i===draft.items.length-1?"disabled":"")+' aria-label="Übung nach unten">↓</button></div></div>';
  if(it.suggestionText)out+='<div class="suggestion-chip">↗ '+esc(it.suggestionText)+'</div>';if(it.skipped)out+='<div class="skipped-notice">Diese Übung wird für diese Einheit übersprungen.</div>';
  out+='<div class="sets-grid workout-entry-grid"><label class="field-label weight-entry-label">Gewicht<input class="input workout-input weight-input" data-index="'+i+'" data-field="weight" value="'+esc(it.weight)+'" '+(it.skipped?"disabled":"")+' placeholder="kg" aria-label="Tatsächliches Gewicht oder Unterstützung"></label>';
  it.reps.forEach((rep,s)=>{out+='<label class="field-label">Satz '+(s+1)+'<input class="input workout-input rep-input" data-index="'+i+'" data-rep-index="'+s+'" data-field="rep" type="number" min="0" inputmode="numeric" value="'+esc(rep)+'" '+(it.skipped?"disabled":"")+' placeholder="Wdh."></label>';});
@@ -139,6 +162,14 @@ function train(){
  out+='<section class="card workout-notes-card"><label class="field-label notes-label" for="workout-notes">Notizen zu dieser Einheit</label><textarea id="workout-notes" class="input workout-notes" rows="3" placeholder="Wie lief das Training? Energie, Stimmung, Beschwerden …">'+esc(draft.notes||"")+'</textarea><div class="note">Wird automatisch gespeichert und später in der Historie angezeigt.</div></section><div class="actions finish-actions"><button class="primary full-width" data-action="finish-workout">Training abschließen</button><div class="note">Nicht markierte Übungen können als teilweise absolvierte Einheit gespeichert werden. Übersprungene Übungen werden nicht als Fehler gewertet.</div></div></div>';return out;
 }
 function syncDraftFromDom(){if(!draft||route()!=="train")return;document.querySelectorAll(".workout-input").forEach(el=>{const i=Number(el.dataset.index);if(!draft.items[i])return;if(el.dataset.field==="weight")draft.items[i].weight=el.value;if(el.dataset.field==="rep")draft.items[i].reps[Number(el.dataset.repIndex)]=el.value;});const notes=document.querySelector(".workout-notes");if(notes)draft.notes=notes.value;put("fitness.draft",draft)}
+function fillPreviousReps(index){
+ syncDraftFromDom();const item=draft&&draft.items[index];if(!item||item.skipped)return;
+ const ex=((draft.planSnapshot&&draft.planSnapshot.exercises)||[]).find(x=>x.id===item.exerciseId)||activePlan()?.exercises.find(x=>x.id===item.exerciseId);
+ if(!ex)return;const previous=exerciseHistory(ex).find(h=>!h.item.skipped&&h.reps.length);if(!previous){alert("Für diese Übung gibt es noch keine Wiederholungen aus einer früheren Einheit.");return;}
+ let copied=0;item.reps.forEach((value,i)=>{if(String(value).trim()===""&&previous.reps[i]!==undefined){item.reps[i]=String(previous.reps[i]);copied++;}});
+ if(!String(item.weight||"").trim()&&previous.weight)item.weight=previous.weight;
+ if(!copied){alert("Alle Sätze enthalten bereits Werte.");return;}put("fitness.draft",draft);render();
+}
 function finishWorkout(){syncDraftFromDom();if(!draft||!draft.items.length){alert("Es gibt keine Trainingseinheit zum Speichern.");return;}const open=draft.items.filter(x=>!x.done&&!x.skipped);if(open.length&&!confirm(open.length+" Übung(en) sind noch nicht als erledigt markiert. Möchtest du die Einheit trotzdem als teilweise absolviert speichern?"))return;const w={id:uid("workout"),date:draft.date,planId:draft.planId,planName:draft.planName,trainingVariant:draft.trainingVariant==="short"?"short":(draft.trainingVariant==="full"?"full":null),notes:String(draft.notes||""),planSnapshot:deepCopy(draft.planSnapshot),items:draft.items.map(x=>deepCopy(x))};workouts=get("fitness.workouts",SEED);workouts.unshift(w);if(!put("fitness.workouts",workouts))return;localStorage.removeItem("fitness.draft");draft=null;nav("history")}
 function saveWeightAsDefault(index){syncDraftFromDom();const item=draft&&draft.items[index];if(!item||item.skipped)return;const p=plans.find(x=>x.id===draft.planId);if(!p)return;const ex=p.exercises.find(x=>x.id===item.exerciseId)||p.exercises.find(x=>x.name===item.name);if(!ex){alert("Die Übung wurde im Trainingsplan nicht gefunden.");return;}if(!item.weight.trim()){alert("Bitte trage zuerst ein Gewicht ein.");return;}if(!confirm("Das Gewicht „"+item.weight+"“ als Planstandard für „"+item.name+"“ übernehmen?"))return;ex.weight=item.weight.trim();if(draft.planSnapshot){const snap=draft.planSnapshot.exercises.find(x=>x.id===ex.id)||draft.planSnapshot.exercises.find(x=>x.name===ex.name);if(snap)snap.weight=ex.weight;}setPlans();put("fitness.draft",draft);alert("Standardgewicht im Trainingsplan aktualisiert.");render()}
 function discardDraft(){if(!confirm("Die laufende Trainingseinheit wirklich verwerfen? Die bereits eingegebenen Werte gehen verloren."))return;localStorage.removeItem("fitness.draft");draft=null;nav("home")}
@@ -319,6 +350,7 @@ async function shareJSON(){
 function handleAction(b){
  const a=b.dataset.action,id=b.dataset.id,i=Number(b.dataset.index);
  if(a==="start-training")startTraining();else if(a==="choose-training")chooseTraining(b.dataset.variant);else if(a==="back-home")nav("home");else if(a==="finish-workout")finishWorkout();else if(a==="discard-draft")discardDraft();
+ else if(a==="start-rest-timer")startRestTimer(b.dataset.seconds);else if(a==="stop-rest-timer")stopRestTimer();else if(a==="fill-previous-reps")fillPreviousReps(i);
  else if(a==="toggle-done"){syncDraftFromDom();const x=draft&&draft.items[i];if(x){x.done=!x.done;if(x.done)x.skipped=false;put("fitness.draft",draft);render();}}
  else if(a==="toggle-skipped"){syncDraftFromDom();const x=draft&&draft.items[i];if(x){x.skipped=!x.skipped;if(x.skipped)x.done=false;put("fitness.draft",draft);render();}}
  else if(a==="move-exercise-up"||a==="move-exercise-down"){syncDraftFromDom();const n=i+(a==="move-exercise-up"?-1:1);if(draft&&n>=0&&n<draft.items.length){[draft.items[i],draft.items[n]]=[draft.items[n],draft.items[i]];put("fitness.draft",draft);render();}}
@@ -335,4 +367,6 @@ document.getElementById("app").addEventListener("input",event=>{
 window.addEventListener("hashchange",render);
 if(!location.hash)location.hash="home";
 render();
-if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js?v=16",{scope:"./"}).catch(error=>console.warn("Service Worker konnte nicht registriert werden.",error));
+if(draft&&draft.restTimerEndAt){restTimerInterval=setInterval(updateRestTimer,1000);updateRestTimer();}
+if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js?v=17",{scope:"./"}).catch(error=>console.warn("Service Worker konnte nicht registriert werden.",error));
+
