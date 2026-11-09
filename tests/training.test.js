@@ -29,11 +29,17 @@ function loadApp() {
       set hash(value) { this._hash = value.startsWith("#") ? value : "#" + value; }
     },
     window: { addEventListener() {} },
-    navigator: { serviceWorker: { register() { return Promise.resolve(); } } },
+    navigator: {
+      serviceWorker: { register() { return Promise.resolve(); } },
+      canShare() { return true; },
+      async share(data) { context.sharedData = data; }
+    },
     alert() {},
     confirm() { return true; },
     console: { warn() {}, error() {} },
     Blob: class { constructor(parts) { context.exportedText = parts.join(""); } },
+    File: class { constructor(parts, name, options) { this.content = parts.join(""); this.name = name; this.type = options.type; } },
+    setTimeout(callback) { callback(); },
     URL: { createObjectURL() { return "blob:test"; }, revokeObjectURL() {} }
   };
   vm.createContext(context);
@@ -41,7 +47,7 @@ function loadApp() {
   vm.runInContext(source + `\nglobalThis.testApi = {
     recommendedTrainingVariant, todaySetCount, activePlan, freshDraft, trainingChoice,
     startTraining, chooseTraining, finishWorkout, normalizeWorkout, historyView, progressCombinedChart,
-    exportJSON, getDraft: () => draft, getWorkouts: () => workouts, getScreen: () => document.getElementById("app").innerHTML,
+    exportJSON, shareJSON, more, getDraft: () => draft, getWorkouts: () => workouts, getScreen: () => document.getElementById("app").innerHTML,
     renderChoice: () => trainingChoice()
   };`, context);
   return { api: context.testApi, store, context };
@@ -102,4 +108,19 @@ test("combined chart renders aligned weights, set bars, shared dates, and SVG ov
   assert.equal((html.match(/class="combined-rep-bar"/g) || []).length, 5);
   assert.match(html, /20 kg/);
   assert.match(html, /22,5 kg/);
+});
+
+test("ChatGPT share button offers the JSON file and preserves download fallback", async () => {
+  const { api, context } = loadApp();
+  assert.match(api.more(), /data-action="share-json"/);
+  assert.match(api.more(), /data-action="export-json"/);
+  await api.shareJSON();
+  assert.equal(context.sharedData.files[0].type, "application/json");
+  assert.match(context.sharedData.files[0].name, /^fitness-trainingsdaten-.*\.json$/);
+  assert.match(context.sharedData.text, /ChatGPT/);
+  assert.equal(JSON.parse(context.sharedData.files[0].content).schemaVersion, 1);
+
+  context.navigator.canShare = () => false;
+  await api.shareJSON();
+  assert.equal(JSON.parse(context.exportedText).schemaVersion, 1);
 });
