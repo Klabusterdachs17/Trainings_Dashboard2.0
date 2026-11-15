@@ -65,7 +65,7 @@ let goals=get("fitness.goals",DEFAULT_GOALS).map(normalizeGoal);
 let plans=get("fitness.plans",DEFAULT_PLANS).map(normalizePlan);
 let draft=normalizeDraftRecord(get("fitness.draft",null));
 if(draft)put("fitness.draft",draft);
-let planDraft=null,goalDraft=null,editingWorkoutId=null,replacementIndex=null,googleHistoryCandidates=[],historyFilter="all",progressMode="strength",progressRange="12";
+let planDraft=null,goalDraft=null,editingWorkoutId=null,replacementIndex=null,googleHistoryCandidates=[],historyFilter="all",progressMode="strength",progressRange="4";
 function activePlan(){return plans.find(p=>p.active&&!p.archived)||plans.find(p=>!p.archived)||plans[0]||null}
 function activeGoal(){const id=localStorage.getItem("fitness.activeGoal");return goals.find(g=>g.id===id&&g.status==="active")||goals.find(g=>g.status==="active")||null}
 function recommendedTrainingVariant(date=new Date()){const day=date.getDay();return day===0||day===6?"full":"short"}
@@ -75,8 +75,8 @@ function nav(to){location.hash=to}
 function setPlans(){put("fitness.plans",plans)}
 function setGoals(){put("fitness.goals",goals)}
 function sortedWorkouts(){return workouts.map(normalizeWorkout).sort((a,b)=>toTimestamp(b.date)-toTimestamp(a.date))}
-function exerciseHistory(exercise) {
- return sortedWorkouts().map(w=>{const item=w.items.find(x=>x.exerciseId===exercise.id&&x.name.toLowerCase()===exercise.name.toLowerCase())||w.items.find(x=>x.name.toLowerCase()===exercise.name.toLowerCase());if(!item||item.skipped)return null;const nums=item.reps.map(v=>String(v).trim()===""?null:Number(v)).filter(v=>v!==null&&Number.isFinite(v));const fullyLogged=item.reps.length>0&&nums.length===item.reps.length;return {workout:w,item:item,reps:nums,fullyLogged:fullyLogged,weight:item.weight}}).filter(Boolean);
+function exerciseHistory(exercise,sourceWorkouts=sortedWorkouts()) {
+ return sourceWorkouts.map(w=>{const item=w.items.find(x=>x.exerciseId===exercise.id&&x.name.toLowerCase()===exercise.name.toLowerCase())||w.items.find(x=>x.name.toLowerCase()===exercise.name.toLowerCase());if(!item||item.skipped)return null;const nums=item.reps.map(v=>String(v).trim()===""?null:Number(v)).filter(v=>v!==null&&Number.isFinite(v));const fullyLogged=item.reps.length>0&&nums.length===item.reps.length;return {workout:w,item:item,reps:nums,fullyLogged:fullyLogged,weight:item.weight}}).filter(Boolean);
 }
 function getSuggestion(exercise) {
  if(exercise.kind==="bodyweight")return null;
@@ -111,7 +111,8 @@ function stopRestTimer(){
  if(draft){draft.restTimerEndAt=null;put("fitness.draft",draft);}clearInterval(restTimerInterval);restTimerInterval=null;
  const display=document.querySelector(".rest-timer-display");if(display){display.textContent="Bereit";display.classList.remove("finished");}
 }
-function render(){const app=document.getElementById("app");app.innerHTML=view(route());document.querySelectorAll(".bottom-nav button").forEach(b=>{b.classList.toggle("active",b.dataset.route===route());b.onclick=()=>nav(b.dataset.route)});if(route()==="more")refreshGoogleHealthStatus()}
+function render(){const app=document.getElementById("app");app.innerHTML=view(route());document.querySelectorAll(".bottom-nav button").forEach(b=>{b.classList.toggle("active",b.dataset.route===route());b.onclick=()=>nav(b.dataset.route)});if(route()==="more")refreshGoogleHealthStatus();if(route()==="progress")setTimeout(scrollProgressChartsToLatest,0)}
+function scrollProgressChartsToLatest(){document.querySelectorAll(".combined-trend,.load-chart-scroll").forEach(el=>{el.scrollLeft=el.scrollWidth;});}
 function view(r){if(r==="home")return home();if(r==="training-choice")return trainingChoice();if(r==="train")return train();if(r==="exercise-replace")return replaceExerciseView();if(r==="history")return historyView();if(r==="history-edit")return historyEditView();if(r==="progress")return progress();if(r==="more")return more();if(r==="plan-edit")return planEditView();if(r==="goal-edit")return goalEditView();return home()}
 function home(){
  const g=activeGoal(),p=activePlan();let out='<div class="app home-page"><header><h1>🏋️ Fitness</h1><div class="sub">Dein Training. Dein Fortschritt.</div></header><button class="primary start-top" data-action="start-training">▶ Neues Training starten</button>';
@@ -245,9 +246,9 @@ function progressCombinedChart(entries,kind){
  const reps=entries.flatMap(h=>h.reps.filter(v=>Number.isFinite(v))),maxReps=Math.max(12,...reps);
  const weights=entries.map(h=>progressNumber(h.weight)),valid=weights.filter(v=>v!==null);
  const minW=valid.length?Math.min(...valid):0,maxW=valid.length?Math.max(...valid):1;
- const range=maxW-minW||1,step=66,width=entries.length*step-6;
+ const range=maxW-minW||1,step=50,width=Math.max(1,entries.length*step-2);
  // Y values map to the actual repetition-bar area, not a separate strip above it.
- const coords=weights.map((v,i)=>({x:i*step+30,y:54-(v===null?0:(v-minW)/range*38),v}));
+ const coords=weights.map((v,i)=>({x:i*step+24,y:54-(v===null?0:(v-minW)/range*38),v}));
  const linePoints=coords.filter(p=>p.v!==null).map(p=>p.x+','+p.y).join(' ');
  const lineColor=kind==="assistance"?"#67e8ad":"#ffd166";
  let out='<div class="combined-chart-shell"><div class="combined-trend" role="img" aria-label="Gewichtslinie über den Wiederholungsbalken, je Trainingstag">';
@@ -286,6 +287,27 @@ function personalBestCard(records,latestWorkoutId){
 function progressModeSwitch(){
  return '<div class="progress-mode-switch" role="group" aria-label="Fortschrittsansicht"><button type="button" class="'+(progressMode==="strength"?"active":"")+'" data-action="progress-mode" data-mode="strength" aria-pressed="'+(progressMode==="strength")+'">Kraft</button><button type="button" class="'+(progressMode==="load"?"active":"")+'" data-action="progress-mode" data-mode="load" aria-pressed="'+(progressMode==="load")+'">Belastung</button></div>';
 }
+function progressPeriodSwitch(){
+ const ranges=[["4","4 Wochen"],["12","12 Wochen"],["all","Gesamt"]];
+ return '<div class="progress-period-control"><span class="muted-label">Zeitraum</span><div class="progress-period-switch" role="group" aria-label="Zeitraum für alle Fortschrittsgrafiken">'+ranges.map(([key,label])=>'<button type="button" class="'+(progressRange===key?"active":"")+'" data-action="progress-period" data-period="'+key+'" aria-pressed="'+(progressRange===key)+'">'+label+'</button>').join("")+'</div></div>';
+}
+function progressWorkoutList(){
+ const list=sortedWorkouts();if(progressRange==="all")return list;
+ const days=progressRange==="4"?28:84,now=new Date(),cutoff=new Date(now.getFullYear(),now.getMonth(),now.getDate()-days).getTime();
+ return list.filter(w=>toTimestamp(w.date)>=cutoff);
+}
+function progressConsistencyBuckets(list){
+ const today=new Date();today.setHours(23,59,59,999);const buckets=[];
+ if(progressRange==="all"){
+  const oldest=list.length?new Date(toTimestamp(list[list.length-1].date)):today;
+  let cursor=new Date(oldest.getFullYear(),oldest.getMonth(),1),last=new Date(today.getFullYear(),today.getMonth(),1);
+  while(cursor<=last){const next=new Date(cursor.getFullYear(),cursor.getMonth()+1,1),start=cursor.getTime(),end=next.getTime();buckets.push({label:cursor.toLocaleDateString("de-DE",{month:"short",year:"2-digit"}),count:list.filter(w=>toTimestamp(w.date)>=start&&toTimestamp(w.date)<end).length});cursor=next;}
+ }else{
+  const total=progressRange==="4"?4:12;
+  for(let i=total-1;i>=0;i--){const end=new Date(today);end.setDate(end.getDate()-i*7);const start=new Date(end);start.setDate(start.getDate()-6);start.setHours(0,0,0,0);buckets.push({label:end.toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"}),count:list.filter(w=>{const t=toTimestamp(w.date);return t>=start.getTime()&&t<=end.getTime()}).length});}
+ }
+ return buckets;
+}
 function formatHealthDuration(seconds){
  if(!Number.isFinite(seconds))return "–";
  const totalMinutes=Math.round(seconds/60),hours=Math.floor(totalMinutes/60),minutes=totalMinutes%60;
@@ -297,12 +319,10 @@ function progressTrainingVariantLabel(workout){
  return workout.source==="google-health"?"Variante nicht zugeordnet":"Variante nicht gespeichert";
 }
 function googleLoadProgressView(){
- const now=new Date(),days=progressRange==="4"?28:(progressRange==="12"?84:Infinity),cutoff=Number.isFinite(days)?new Date(now.getFullYear(),now.getMonth(),now.getDate()-days).getTime():0;
- const sessions=sortedWorkouts().filter(w=>w.googleHealth&&(progressRange==="all"||toTimestamp(w.date)>=cutoff)).sort((a,b)=>toTimestamp(a.date)-toTimestamp(b.date));
+ const sessions=progressWorkoutList().filter(w=>w.googleHealth).sort((a,b)=>toTimestamp(a.date)-toTimestamp(b.date));
  const sum=(key)=>{const values=sessions.map(w=>w.googleHealth[key]).filter(Number.isFinite);return values.length?values.reduce((total,value)=>total+value,0):null};
  const elapsed=sum("elapsedSeconds"),active=sum("activeDurationSeconds"),zoneMinutes=sum("activeZoneMinutes");
- const ranges=[["4","4 Wochen"],["12","12 Wochen"],["all","Gesamt"]];
- let out='<div class="app progress-page"><header><h2>Fortschritt</h2><div class="sub">Dauer und Zonenminuten deiner Google-Health-Workouts.</div></header>'+progressModeSwitch()+'<div class="progress-period-switch" role="group" aria-label="Zeitraum">'+ranges.map(([key,label])=>'<button type="button" class="'+(progressRange===key?"active":"")+'" data-action="progress-period" data-period="'+key+'" aria-pressed="'+(progressRange===key)+'">'+label+'</button>').join("")+'</div>';
+ let out='<div class="app progress-page"><header><h2>Fortschritt</h2><div class="sub">Dauer und Zonenminuten deiner Google-Health-Workouts.</div></header>'+progressModeSwitch()+progressPeriodSwitch();
  out+='<div class="statgrid load-statgrid"><div class="stat"><b>'+sessions.length+'</b><span>Google-Workouts</span></div><div class="stat"><b>'+formatHealthDuration(elapsed)+'</b><span>Gesamtdauer</span></div><div class="stat"><b>'+formatHealthDuration(active)+'</b><span>Aktive Zeit</span></div><div class="stat"><b>'+(zoneMinutes===null?"–":Math.round(zoneMinutes)+" ZM")+'</b><span>Zonenminuten</span></div></div>';
  if(!sessions.length)return out+'<section class="card progress-empty">Für diesen Zeitraum gibt es noch keine importierten oder verknüpften Google-Health-Workouts.</section></div>';
  const zones=[["fatBurn","Fat Burn","fat-burn"],["cardio","Cardio","cardio"],["peak","Peak","peak"]];
@@ -329,9 +349,9 @@ function setProgressMode(mode){if(mode==="strength"||mode==="load"){progressMode
 function setProgressRange(range){if(["4","12","all"].includes(range)){progressRange=range;render();}}
 function progress(){
  if(progressMode==="load")return googleLoadProgressView();
- const list=sortedWorkouts(),sets=list.reduce((sum,w)=>sum+w.items.reduce((n,it)=>n+it.reps.filter(x=>String(x).trim()!=="").length,0),0);
+ const list=progressWorkoutList(),sets=list.reduce((sum,w)=>sum+w.items.reduce((n,it)=>n+it.reps.filter(x=>String(x).trim()!=="").length,0),0);
  const p=activePlan(),g=activeGoal();
- let out='<div class="app progress-page"><header><h2>Fortschritt</h2><div class="sub">Deine Entwicklung über alle dokumentierten Trainingseinheiten.</div></header>'+progressModeSwitch()+'<div class="statgrid"><div class="stat"><b>'+list.length+'</b><span>Trainingseinheiten</span></div><div class="stat"><b>'+sets+'</b><span>Sätze eingetragen</span></div><div class="stat"><b>'+esc(list[0]?list[0].date:"–")+'</b><span>Letztes Training</span></div></div>'+personalBestCard(personalBestRecords(list),list[0]&&list[0].id);
+ let out='<div class="app progress-page"><header><h2>Fortschritt</h2><div class="sub">Der Zeitraumfilter gilt für Kraft- und Belastungsgrafiken.</div></header>'+progressModeSwitch()+progressPeriodSwitch()+'<div class="statgrid"><div class="stat"><b>'+list.length+'</b><span>Trainingseinheiten</span></div><div class="stat"><b>'+sets+'</b><span>Sätze eingetragen</span></div><div class="stat"><b>'+esc(list[0]?list[0].date:"–")+'</b><span>Letztes Training</span></div></div>'+personalBestCard(personalBestRecords(list),list[0]&&list[0].id);
  const allExercises=[];const seen=new Set();
  (p?p.exercises:[]).forEach(ex=>{const key=ex.id+"|"+ex.name.toLowerCase();if(!seen.has(key)){seen.add(key);allExercises.push(ex);}});
  list.forEach(workout=>workout.items.filter(item=>item.isReplacement&&!item.skipped).forEach(item=>{const ex=normalizeExercise({id:item.exerciseId,name:item.name,weight:item.weight,kind:item.kind,minReps:item.minReps,maxReps:item.maxReps,increaseStep:item.increaseStep,decreaseStep:item.decreaseStep,failuresBeforeDecrease:item.failuresBeforeDecrease});const key=ex.id+"|"+ex.name.toLowerCase();if(!seen.has(key)){seen.add(key);allExercises.push(ex);}}));
@@ -342,15 +362,15 @@ function progress(){
  const pullups=allExercises.filter(ex=>/klimmzug|klimmzüge|pull.?up/i.test(ex.name)&&ex.kind==="assistance");
  if(pullups.length){
   out+='<section class="card pullup-progress"><div class="eyebrow">DEIN GROSSES ZIEL</div><h2>Der Weg zum ersten Klimmzug</h2><p class="section-intro">Bei unterstützten Klimmzügen ist weniger Unterstützung besser. Hier siehst du jede Einheit mit eingetragenen Wiederholungen – nicht nur den letzten Wert.</p>';
-  pullups.forEach(ex=>{const hist=exerciseHistory(ex).filter(h=>h.reps.length>0&&h.weight);const completed=hist.filter(h=>h.item.done&&h.fullyLogged);const latest=hist[0];out+='<div class="pullup-summary"><div><span class="muted-label">Letzte dokumentierte Unterstützung</span><b>'+esc(latest?latest.weight:"Noch keine Daten")+'</b><small>'+esc(latest?latest.reps.join(" / ")+" Wiederholungen":"Trage deine erste Einheit ein.")+'</small></div><div><span class="muted-label">Einheiten</span><b>'+hist.length+'</b><small>'+completed.length+' vollständig dokumentiert</small></div></div><div class="trend-title">Unterstützung im Verlauf <span>weniger = besser</span></div>';
-   const chartEntries=hist.slice(0,12).reverse();out+=progressCombinedChart(chartEntries,"assistance");
+  pullups.forEach(ex=>{const hist=exerciseHistory(ex,list).filter(h=>h.reps.length>0&&h.weight);const completed=hist.filter(h=>h.item.done&&h.fullyLogged);const latest=hist[0];out+='<div class="pullup-summary"><div><span class="muted-label">Letzte dokumentierte Unterstützung</span><b>'+esc(latest?latest.weight:"Noch keine Daten")+'</b><small>'+esc(latest?latest.reps.join(" / ")+" Wiederholungen":"Trage deine erste Einheit ein.")+'</small></div><div><span class="muted-label">Einheiten</span><b>'+hist.length+'</b><small>'+completed.length+' vollständig dokumentiert</small></div></div><div class="trend-title">Unterstützung im Verlauf <span>weniger = besser</span></div>';
+   const chartEntries=hist.slice().reverse();out+=progressCombinedChart(chartEntries,"assistance");
    if(hist.length>1){const first=progressNumber(hist[hist.length-1].weight),last=progressNumber(hist[0].weight);if(first!==null&&last!==null)out+='<p class="trend-caption">'+(last<first?"Die benötigte Unterstützung ist um "+(first-last).toLocaleString("de-DE")+" kg gesunken.":(last>first?"Zuletzt wurde mehr Unterstützung verwendet als zu Beginn des angezeigten Verlaufs.":"Die Unterstützung ist bisher gleich geblieben."))+'</p>';}
   });out+='</section>';
  }
  out+='<div class="section-title"><div><span class="eyebrow">KRAFTENTWICKLUNG</span><h2>Alle Übungen im Verlauf</h2></div></div><p class="section-intro">Jeder Balken steht für eine dokumentierte Trainingseinheit. Übersprungene Übungen werden ausgeschlossen; vorgeschlagene Gewichte fließen nicht in die Auswertung ein.</p>';
  if(!p||!p.exercises.length)out+='<section class="card">Lege einen aktiven Trainingsplan an, damit deine Übungen hier erscheinen.</section>';
  (p?p.exercises:[]).forEach(ex=>{
-  const hist=exerciseHistory(ex).filter(h=>h.reps.length>0&&h.item.weight).slice(0,12).reverse();
+  const hist=exerciseHistory(ex,list).filter(h=>h.reps.length>0&&h.item.weight).slice().reverse();
   const completed=hist.filter(h=>h.item.done&&h.fullyLogged),latest=hist.length?hist[hist.length-1]:null,previous=hist.length>1?hist[hist.length-2]:null,s=getSuggestion(ex);
   const label=ex.kind==="assistance"?"Unterstützung":(ex.kind==="bodyweight"?"Körpergewicht":"Gewicht");
   out+='<details class="card progress-exercise"><summary class="progress-ex-summary"><div><h3>'+esc(ex.name)+'</h3><div class="meta">Ziel '+ex.minReps+'–'+ex.maxReps+' Wdh. · '+label+'</div></div><span class="progress-summary-value">'+esc(latest?latest.weight:ex.weight||"–")+'<small>zuletzt</small></span></summary>';
@@ -358,12 +378,12 @@ function progress(){
   out+='<div class="trend-title">Gewicht und Sätze je Einheit <span>'+hist.length+' Einheiten</span></div>'+progressCombinedChart(hist,ex.kind);
   if(s)out+='<div class="suggestion-box '+s.kind+'"><span>'+esc(s.message)+'</span><b>'+esc(s.weight)+'</b></div>';
   if(!hist.length)out+='<div class="progress-empty">Noch keine ausreichend dokumentierten Daten für diese Übung.</div>';
-  out+='<p class="trend-caption">Es werden bis zu 12 der letzten Einheiten angezeigt. Insgesamt '+completed.length+' Einheiten sind vollständig dokumentiert.</p></details>';
+  out+='<p class="trend-caption">Es werden alle Einheiten im gewählten Zeitraum angezeigt. Insgesamt '+completed.length+' Einheiten sind vollständig dokumentiert.</p></details>';
  });
- out+='<section class="card progress-consistency"><div class="eyebrow">TRAININGSKONSTANZ</div><h3>Deine letzten Wochen</h3><div class="consistency-grid">';
- const counts=[];for(let d=5;d>=0;d--){const date=new Date();date.setDate(date.getDate()-d*7);const from=new Date(date);from.setDate(from.getDate()-6);const count=list.filter(w=>{const t=toTimestamp(w.date);return t>=from.setHours(0,0,0,0)&&t<=date.setHours(23,59,59,999)}).length;counts.push({label:date.toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"}),count});}
+ const counts=progressConsistencyBuckets(list),bucketLabel=progressRange==="all"?"Monat":"Woche";
+ out+='<section class="card progress-consistency"><div class="eyebrow">TRAININGSKONSTANZ</div><h3>Einheiten je '+bucketLabel+'</h3><div class="consistency-grid">';
  counts.forEach(x=>{out+='<div class="consistency-week"><b>'+x.count+'</b><div class="consistency-bar-wrap"><div class="consistency-bar" style="height:'+Math.max(5,Math.min(48,x.count*16))+'px"></div></div><small>'+esc(x.label)+'</small></div>';});
- out+='</div><p class="trend-caption">Gezählt werden abgeschlossene Trainingseinheiten pro rollierender 7-Tage-Periode.</p></section></div>';
+ out+='</div><p class="trend-caption">'+(progressRange==="all"?"Bei „Gesamt“ werden Einheiten pro Kalendermonat gezeigt.":"Gezählt werden Einheiten in rollierenden 7-Tage-Zeiträumen.")+'</p></section></div>';
  return out;
 }
 function more(){
@@ -483,5 +503,5 @@ if(!location.hash)location.hash="home";
 render();
 const googleHealthResult=new URLSearchParams(location.search).get("googleHealth");if(googleHealthResult){history.replaceState(null,"",location.pathname+location.hash);setTimeout(()=>{if(googleHealthResult==="connected")alert("Google Health ist verbunden. Nach dem nächsten Training kannst du das Pixel-Watch-Workout zuordnen.");else if(googleHealthResult==="google_account_not_linked")alert("Dieses Google-Konto ist noch nicht mit einem Google-Health-Profil verknüpft. Öffne zuerst die Google-Health-App und melde dich mit demselben Konto an.");else if(googleHealthResult==="oauth_cancelled")alert("Die Google-Anmeldung wurde abgebrochen oder ist abgelaufen. Starte die Verbindung bitte erneut.");else alert("Google Health konnte nicht verbunden werden. Prüfe im Vercel-Dashboard die Runtime Logs für /api/google/callback.");},150);}
 if(draft&&draft.restTimerEndAt){restTimerInterval=setInterval(updateRestTimer,1000);updateRestTimer();}
-if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js?v=27",{scope:"./"}).catch(error=>console.warn("Service Worker konnte nicht registriert werden.",error));
+if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js?v=28",{scope:"./"}).catch(error=>console.warn("Service Worker konnte nicht registriert werden.",error));
 

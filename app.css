@@ -401,3 +401,19 @@ h3{font-size:15px;margin:0;font-weight:800}
 .google-health-card{border-color:#315646;background:linear-gradient(145deg,rgba(20,47,38,.7),rgba(19,27,35,.95))}.google-health-status{font-size:.9rem;color:var(--muted);margin:14px 0}.google-health-actions{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}.button-link{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;padding:11px 15px;border-radius:12px;font-weight:700}.google-health-result{margin-top:14px;padding:13px;border:1px solid var(--line);border-radius:12px;background:rgba(20,31,40,.72)}.google-health-result p{margin:8px 0 0;color:var(--muted);font-size:.82rem;line-height:1.5}.google-health-metrics{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:10px}.google-health-metrics span{display:flex;gap:5px;color:var(--muted);font-size:.8rem}.google-health-metrics b{color:var(--text)}.history-health-action{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
 .google-history-import-card{border-color:#315646}.google-history-range{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:14px 0}.google-history-item{display:grid;gap:10px;margin-top:10px;padding:12px;border:1px solid var(--line);border-radius:12px;background:rgba(20,31,40,.72)}.google-history-item-head{display:flex;justify-content:space-between;gap:10px}.google-history-item-head>div{display:grid;gap:4px}.google-history-item .field-label{margin:0}.google-history-imported{color:var(--muted);font-size:.85rem}.google-history-truncated{margin-top:12px}@media(max-width:420px){.google-history-range{grid-template-columns:1fr}}
 
+
+/* Shared progress range and recent-session-first chart layout */
+.progress-page .progress-period-control{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 14px}
+.progress-page .progress-period-control>.muted-label{font-size:11px}
+.progress-page .progress-period-switch{display:flex;gap:3px;align-items:center}
+.progress-page .combined-trend{gap:2px}
+.progress-page .combined-session{flex:0 0 48px;min-width:48px;gap:3px}
+.progress-page .combined-reps{gap:2px}
+.progress-page .combined-set{width:13px}
+.progress-page .load-bars{gap:3px}
+.progress-page .load-bar-item{flex-basis:32px;width:32px;gap:4px}
+.progress-page .consistency-grid{overflow-x:auto;justify-content:flex-start!important;scrollbar-width:thin}
+.progress-page .consistency-week{flex:0 0 38px!important;min-width:38px!important}
+.progress-page .combined-trend,.progress-page .load-chart-scroll{scroll-snap-type:x proximity;overscroll-behavior-x:contain}
+.progress-page .combined-session,.progress-page .load-bar-item{scroll-snap-align:end}
+@media(max-width:420px){.progress-page .progress-period-control{align-items:flex-start;flex-direction:column}.progress-page .progress-period-switch{width:100%}.progress-page .progress-period-switch button{flex:1}}
