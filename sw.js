@@ -1,5 +1,5 @@
-const CACHE="fitness-v34";
-const CORE=["./","./index.html","./app.css?v=34","./app.js?v=34","./manifest.webmanifest?v=34","./icon-192.png","./icon-512.png"];
+const CACHE="fitness-v35";
+const CORE=["./","./index.html","./app.css?v=35","./app.js?v=35","./manifest.webmanifest?v=35","./icon-192.png","./icon-512.png"];
 self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting())));
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener("fetch",e=>{
