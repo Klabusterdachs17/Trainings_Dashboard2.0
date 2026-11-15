@@ -49,10 +49,11 @@ function loadApp() {
   const source = fs.readFileSync(path.join(__dirname, "..", "app.js"), "utf8");
   vm.runInContext(source + `\nglobalThis.testApi = {
     recommendedTrainingVariant, todaySetCount, activePlan, freshDraft, trainingChoice,
-    startTraining, chooseTraining, finishWorkout, normalizeWorkout, historyView, setHistoryFilter, progressCombinedChart,
+    startTraining, chooseTraining, finishWorkout, normalizeWorkout, historyView, setHistoryFilter, progressCombinedChart, progress, setProgressMode, setProgressRange,
     exportJSON, shareJSON, more, getDraft: () => draft, getWorkouts: () => workouts, getScreen: () => document.getElementById("app").innerHTML,
     renderChoice: () => trainingChoice(),
-    getHistoryFilter: () => historyFilter
+    getHistoryFilter: () => historyFilter,
+    getProgressMode: () => progressMode, getProgressRange: () => progressRange
   };`, context);
   return { api: context.testApi, store, context };
 }
@@ -161,4 +162,43 @@ test("history filters show app sessions, imported workouts, and linked health da
   assert.equal((html.match(/class="card history-card"/g)||[]).length,linkedBefore+1);
   assert.match(html,/App \+ Google Health/);
   assert.match(html,/Google Health importiert/);
+});
+
+test("progress page preserves strength view and summarizes Google Health load by range", () => {
+  const { api } = loadApp();
+  const existing = api.getWorkouts()[0];
+  const today = new Date().toLocaleDateString("de-DE");
+  existing.date = today;
+  const health = { provider: "google-health", displayName: "Workout", exerciseType: "WORKOUT",
+    elapsedSeconds: 3600, activeDurationSeconds: 3300, activeZoneMinutes: 24,
+    minutesByZone: { fatBurn: 18, cardio: 3, peak: 0 },
+    weightedMinutesByZone: { fatBurn: 18, cardio: 6, peak: 0 }, telemetryAvailable: true };
+  existing.googleHealth = health;
+  api.getWorkouts().push({ id: "google-progress-only", source: "google-health", date: today,
+    planId: "google-health", planName: "Google Health · Workout", items: [],
+    googleHealth: { ...health, displayName: "Workout ohne Zonendetails", telemetryAvailable: false,
+      activeZoneMinutes: 12, elapsedSeconds: 1800, activeDurationSeconds: 1600,
+      weightedMinutesByZone: { fatBurn: 0, cardio: 0, peak: 0 } } });
+  api.setProgressMode("load");
+  api.setProgressRange("all");
+  const html = api.progress();
+  assert.match(html, /Kraft/);
+  assert.match(html, /Belastung/);
+  assert.match(html, /4 Wochen/);
+  assert.match(html, /12 Wochen/);
+  assert.match(html, /Gesamtdauer/);
+  assert.match(html, /Aktive Zeit/);
+  assert.match(html, /36 ZM/);
+  assert.match(html, /Zonenminuten pro Training/);
+  assert.match(html, /Trainingsdauer/);
+  assert.match(html, /Nicht aufgeschlüsselt/);
+  assert.match(html, /Workout ohne Zonendetails/);
+  assert.equal((html.match(/class="load-bar-item"/g)||[]).length, 4);
+  api.setProgressRange("4");
+  assert.equal(api.getProgressRange(), "4");
+  assert.match(api.progress(), /4 Wochen/);
+  assert.equal((api.progress().match(/class="load-bar-item"/g)||[]).length, 4);
+  api.setProgressMode("strength");
+  assert.match(api.progress(), /KRAFTENTWICKLUNG/);
+  assert.match(api.progress(), /combined-weight-line/);
 });

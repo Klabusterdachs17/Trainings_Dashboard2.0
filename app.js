@@ -64,7 +64,7 @@ let goals=get("fitness.goals",DEFAULT_GOALS).map(normalizeGoal);
 let plans=get("fitness.plans",DEFAULT_PLANS).map(normalizePlan);
 let draft=normalizeDraftRecord(get("fitness.draft",null));
 if(draft)put("fitness.draft",draft);
-let planDraft=null,goalDraft=null,editingWorkoutId=null,replacementIndex=null,googleHistoryCandidates=[],historyFilter="all";
+let planDraft=null,goalDraft=null,editingWorkoutId=null,replacementIndex=null,googleHistoryCandidates=[],historyFilter="all",progressMode="strength",progressRange="12";
 function activePlan(){return plans.find(p=>p.active&&!p.archived)||plans.find(p=>!p.archived)||plans[0]||null}
 function activeGoal(){const id=localStorage.getItem("fitness.activeGoal");return goals.find(g=>g.id===id&&g.status==="active")||goals.find(g=>g.status==="active")||null}
 function recommendedTrainingVariant(date=new Date()){const day=date.getDay();return day===0||day===6?"full":"short"}
@@ -282,10 +282,50 @@ function personalBestCard(records,latestWorkoutId){
  if(records.length>3)out+='<details class="personal-best-all"><summary>Alle '+records.length+' Bestwerte</summary>'+records.slice(3).map(row).join("")+'</details>';
  return out+'</section>';
 }
+function progressModeSwitch(){
+ return '<div class="progress-mode-switch" role="group" aria-label="Fortschrittsansicht"><button type="button" class="'+(progressMode==="strength"?"active":"")+'" data-action="progress-mode" data-mode="strength" aria-pressed="'+(progressMode==="strength")+'">Kraft</button><button type="button" class="'+(progressMode==="load"?"active":"")+'" data-action="progress-mode" data-mode="load" aria-pressed="'+(progressMode==="load")+'">Belastung</button></div>';
+}
+function formatHealthDuration(seconds){
+ if(!Number.isFinite(seconds))return "–";
+ const totalMinutes=Math.round(seconds/60),hours=Math.floor(totalMinutes/60),minutes=totalMinutes%60;
+ return hours?hours+" Std."+ (minutes?" "+minutes+" Min.":""):totalMinutes+" Min.";
+}
+function googleLoadProgressView(){
+ const now=new Date(),days=progressRange==="4"?28:(progressRange==="12"?84:Infinity),cutoff=Number.isFinite(days)?new Date(now.getFullYear(),now.getMonth(),now.getDate()-days).getTime():0;
+ const sessions=sortedWorkouts().filter(w=>w.googleHealth&&(progressRange==="all"||toTimestamp(w.date)>=cutoff)).sort((a,b)=>toTimestamp(a.date)-toTimestamp(b.date));
+ const sum=(key)=>{const values=sessions.map(w=>w.googleHealth[key]).filter(Number.isFinite);return values.length?values.reduce((total,value)=>total+value,0):null};
+ const elapsed=sum("elapsedSeconds"),active=sum("activeDurationSeconds"),zoneMinutes=sum("activeZoneMinutes");
+ const ranges=[["4","4 Wochen"],["12","12 Wochen"],["all","Gesamt"]];
+ let out='<div class="app progress-page"><header><h2>Fortschritt</h2><div class="sub">Dauer und Zonenminuten deiner Google-Health-Workouts.</div></header>'+progressModeSwitch()+'<div class="progress-period-switch" role="group" aria-label="Zeitraum">'+ranges.map(([key,label])=>'<button type="button" class="'+(progressRange===key?"active":"")+'" data-action="progress-period" data-period="'+key+'" aria-pressed="'+(progressRange===key)+'">'+label+'</button>').join("")+'</div>';
+ out+='<div class="statgrid load-statgrid"><div class="stat"><b>'+sessions.length+'</b><span>Google-Workouts</span></div><div class="stat"><b>'+formatHealthDuration(elapsed)+'</b><span>Gesamtdauer</span></div><div class="stat"><b>'+formatHealthDuration(active)+'</b><span>Aktive Zeit</span></div><div class="stat"><b>'+(zoneMinutes===null?"–":Math.round(zoneMinutes)+" ZM")+'</b><span>Zonenminuten</span></div></div>';
+ if(!sessions.length)return out+'<section class="card progress-empty">Für diesen Zeitraum gibt es noch keine importierten oder verknüpften Google-Health-Workouts.</section></div>';
+ const zones=[["fatBurn","Fat Burn","fat-burn"],["cardio","Cardio","cardio"],["peak","Peak","peak"]];
+ const points=sessions.map(w=>{const h=w.googleHealth,known=h.telemetryAvailable?zones.map(([key])=>Number(h.weightedMinutesByZone[key])||0):[0,0,0],unknown=h.telemetryAvailable?0:(Number(h.activeZoneMinutes)||0),total=known.reduce((sum,n)=>sum+n,0)+unknown;return {workout:w,known,unknown,total};});
+ const maxZone=Math.max(1,...points.map(p=>p.total));
+ out+='<section class="card load-chart-card"><div class="eyebrow">BELASTUNG</div><h3>Zonenminuten pro Training</h3><p class="meta">Aufgeschlüsselte Werte werden nach Belastungsstufe gestapelt.</p><div class="load-chart-scroll"><div class="load-bars">';
+ points.forEach(point=>{const h=point.workout.googleHealth,label=new Date(toTimestamp(point.workout.date)).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"}),name=point.workout.source==="google-health"?h.displayName:point.workout.planName,title=point.workout.date+" · "+name+" · "+Math.round(h.activeZoneMinutes)+" ZM";out+='<div class="load-bar-item" title="'+esc(title)+'"><b class="load-bar-total">'+Math.round(point.total)+'</b><div class="load-zone-stack" aria-label="'+esc(title)+'">';
+ zones.forEach((zone,index)=>{const amount=point.known[index],height=amount/maxZone*100;if(amount>0)out+='<span class="load-zone '+zone[2]+'" style="height:'+height.toFixed(2)+'%" title="'+zone[1]+': '+Math.round(amount)+' ZM"></span>';});
+ if(point.unknown>0)out+='<span class="load-zone unknown" style="height:'+(point.unknown/maxZone*100).toFixed(2)+'%" title="Nicht aufgeschlüsselt: '+Math.round(point.unknown)+' ZM"></span>';
+ out+='</div><small>'+esc(label)+'</small></div>';});
+ out+='</div></div><div class="load-legend">'+zones.map(zone=>'<span><i class="'+zone[2]+'"></i>'+zone[1]+'</span>').join("")+'<span><i class="unknown"></i>Nicht aufgeschlüsselt</span></div></section>';
+ const maxDuration=Math.max(1,...sessions.map(w=>Number(w.googleHealth.elapsedSeconds)||0));
+ out+='<section class="card load-chart-card"><div class="eyebrow">ZEIT</div><h3>Trainingsdauer</h3><p class="meta">Gesamtdauer als Balken, aktive Zeit als Innenbalken.</p><div class="load-chart-scroll"><div class="load-bars duration-bars">';
+ sessions.forEach(w=>{const h=w.googleHealth,elapsed=Number(h.elapsedSeconds)||0,active=Number(h.activeDurationSeconds)||0,label=new Date(toTimestamp(w.date)).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"}),name=w.source==="google-health"?h.displayName:w.planName;out+='<div class="load-bar-item" title="'+esc(w.date+" · "+name+" · "+formatHealthDuration(elapsed)+" gesamt · "+formatHealthDuration(active)+" aktiv")+'"><b class="load-bar-total">'+Math.round(elapsed/60)+'</b><div class="load-duration-track"><span class="load-duration-total" style="height:'+(elapsed/maxDuration*100).toFixed(2)+'%"></span><span class="load-duration-active" style="height:'+(Math.min(active,elapsed)/maxDuration*100).toFixed(2)+'%"></span></div><small>'+esc(label)+'</small></div>';});
+ out+='</div></div><div class="load-legend"><span><i class="duration-total-key"></i>Gesamtdauer</span><span><i class="duration-active-key"></i>Aktive Zeit</span></div></section>';
+ const zoneTotals=zones.map(zone=>sessions.reduce((sum,w)=>sum+(w.googleHealth.telemetryAvailable?(Number(w.googleHealth.weightedMinutesByZone[zone[0]])||0):0),0));
+ const unknownTotal=sessions.reduce((sum,w)=>sum+(w.googleHealth.telemetryAvailable?0:(Number(w.googleHealth.activeZoneMinutes)||0)),0);
+ out+='<section class="card load-zone-summary"><div class="eyebrow">ZEITRAUM-SUMME</div><h3>Zonenübersicht</h3><div class="load-zone-totals">'+zones.map((zone,index)=>'<div><span><i class="'+zone[2]+'"></i>'+zone[1]+'</span><b>'+Math.round(zoneTotals[index])+' ZM</b></div>').join("")+'<div><span><i class="unknown"></i>Nicht aufgeschlüsselt</span><b>'+Math.round(unknownTotal)+' ZM</b></div></div></section>';
+ out+='<section class="card load-session-list"><div class="eyebrow">EINHEITEN</div><h3>Google-Workouts im Zeitraum</h3>';
+ sessions.slice().reverse().forEach(w=>{const h=w.googleHealth,linked=w.source!=="google-health"&&w.items.length>0;out+='<div class="load-session-row"><div><b>'+esc(w.date)+' · '+esc(linked?w.planName:h.displayName)+'</b><small>'+(linked?"Mit App-Training verknüpft":"Google Health Import")+'</small></div><span>'+formatHealthDuration(h.elapsedSeconds)+'<small>'+Math.round(h.activeZoneMinutes)+' ZM</small></span></div>';});
+ out+='</section></div>';return out;
+}
+function setProgressMode(mode){if(mode==="strength"||mode==="load"){progressMode=mode;render();}}
+function setProgressRange(range){if(["4","12","all"].includes(range)){progressRange=range;render();}}
 function progress(){
+ if(progressMode==="load")return googleLoadProgressView();
  const list=sortedWorkouts(),sets=list.reduce((sum,w)=>sum+w.items.reduce((n,it)=>n+it.reps.filter(x=>String(x).trim()!=="").length,0),0);
  const p=activePlan(),g=activeGoal();
- let out='<div class="app progress-page"><header><h2>Fortschritt</h2><div class="sub">Deine Entwicklung über alle dokumentierten Trainingseinheiten.</div></header><div class="statgrid"><div class="stat"><b>'+list.length+'</b><span>Trainingseinheiten</span></div><div class="stat"><b>'+sets+'</b><span>Sätze eingetragen</span></div><div class="stat"><b>'+esc(list[0]?list[0].date:"–")+'</b><span>Letztes Training</span></div></div>'+personalBestCard(personalBestRecords(list),list[0]&&list[0].id);
+ let out='<div class="app progress-page"><header><h2>Fortschritt</h2><div class="sub">Deine Entwicklung über alle dokumentierten Trainingseinheiten.</div></header>'+progressModeSwitch()+'<div class="statgrid"><div class="stat"><b>'+list.length+'</b><span>Trainingseinheiten</span></div><div class="stat"><b>'+sets+'</b><span>Sätze eingetragen</span></div><div class="stat"><b>'+esc(list[0]?list[0].date:"–")+'</b><span>Letztes Training</span></div></div>'+personalBestCard(personalBestRecords(list),list[0]&&list[0].id);
  const allExercises=[];const seen=new Set();
  (p?p.exercises:[]).forEach(ex=>{const key=ex.id+"|"+ex.name.toLowerCase();if(!seen.has(key)){seen.add(key);allExercises.push(ex);}});
  list.forEach(workout=>workout.items.filter(item=>item.isReplacement&&!item.skipped).forEach(item=>{const ex=normalizeExercise({id:item.exerciseId,name:item.name,weight:item.weight,kind:item.kind,minReps:item.minReps,maxReps:item.maxReps,increaseStep:item.increaseStep,decreaseStep:item.decreaseStep,failuresBeforeDecrease:item.failuresBeforeDecrease});const key=ex.id+"|"+ex.name.toLowerCase();if(!seen.has(key)){seen.add(key);allExercises.push(ex);}}));
@@ -423,7 +463,7 @@ function handleAction(b){
  else if(a==="move-exercise-up"||a==="move-exercise-down"){syncDraftFromDom();const n=i+(a==="move-exercise-up"?-1:1);if(draft&&n>=0&&n<draft.items.length){[draft.items[i],draft.items[n]]=[draft.items[n],draft.items[i]];put("fitness.draft",draft);render();}}
  else if(a==="accept-suggestion"){syncDraftFromDom();if(draft&&draft.items[i]&&draft.items[i].suggestionWeight){draft.items[i].weight=draft.items[i].suggestionWeight;put("fitness.draft",draft);render();}}
  else if(a==="save-weight-default")saveWeightAsDefault(i)
- else if(a==="edit-workout"){editingWorkoutId=id;nav("history-edit");}else if(a==="delete-workout")deleteWorkout(id);else if(a==="save-history-edit")saveHistoryEdit(id);else if(a==="go-history")nav("history");else if(a==="history-filter")setHistoryFilter(b.dataset.filter);
+ else if(a==="edit-workout"){editingWorkoutId=id;nav("history-edit");}else if(a==="delete-workout")deleteWorkout(id);else if(a==="save-history-edit")saveHistoryEdit(id);else if(a==="go-history")nav("history");else if(a==="history-filter")setHistoryFilter(b.dataset.filter);else if(a==="progress-mode")setProgressMode(b.dataset.mode);else if(a==="progress-period")setProgressRange(b.dataset.period);
  else if(a==="new-plan")newPlan();else if(a==="edit-plan")editPlan(id);else if(a==="activate-plan")activatePlan(id);else if(a==="archive-plan")archivePlan(id);else if(a==="delete-plan")deletePlan(id);else if(a==="add-plan-exercise")addPlanExercise();else if(a==="remove-plan-exercise")removePlanExercise(i);else if(a==="plan-ex-up")movePlanExercise(i,-1);else if(a==="plan-ex-down")movePlanExercise(i,1);else if(a==="save-plan")savePlan();
  else if(a==="go-more"){planDraft=null;goalDraft=null;nav("more");}else if(a==="new-goal")newGoal();else if(a==="edit-goal")editGoal(id);else if(a==="edit-active-goal"){const g=activeGoal();if(g)editGoal(g.id);else newGoal();}else if(a==="save-goal")saveGoal();else if(a==="activate-goal")activateGoal(id);else if(a==="complete-goal")completeGoal(id);else if(a==="go-goals"||a==="go-plans")nav("more");else if(a==="share-json")shareChatGPT();else if(a==="export-json")exportJSON();else if(a==="google-sync")syncWorkoutWithGoogle(id);else if(a==="google-history-load")loadGoogleHistory();else if(a==="google-history-import")importGoogleHistory(i);else if(a==="google-disconnect")disconnectGoogleHealth();
 }
@@ -436,5 +476,5 @@ if(!location.hash)location.hash="home";
 render();
 const googleHealthResult=new URLSearchParams(location.search).get("googleHealth");if(googleHealthResult){history.replaceState(null,"",location.pathname+location.hash);setTimeout(()=>{if(googleHealthResult==="connected")alert("Google Health ist verbunden. Nach dem nächsten Training kannst du das Pixel-Watch-Workout zuordnen.");else if(googleHealthResult==="google_account_not_linked")alert("Dieses Google-Konto ist noch nicht mit einem Google-Health-Profil verknüpft. Öffne zuerst die Google-Health-App und melde dich mit demselben Konto an.");else if(googleHealthResult==="oauth_cancelled")alert("Die Google-Anmeldung wurde abgebrochen oder ist abgelaufen. Starte die Verbindung bitte erneut.");else alert("Google Health konnte nicht verbunden werden. Prüfe im Vercel-Dashboard die Runtime Logs für /api/google/callback.");},150);}
 if(draft&&draft.restTimerEndAt){restTimerInterval=setInterval(updateRestTimer,1000);updateRestTimer();}
-if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js?v=23",{scope:"./"}).catch(error=>console.warn("Service Worker konnte nicht registriert werden.",error));
+if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js?v=24",{scope:"./"}).catch(error=>console.warn("Service Worker konnte nicht registriert werden.",error));
 
