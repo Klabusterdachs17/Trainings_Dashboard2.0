@@ -39,8 +39,17 @@ module.exports = async (req, res) => {
       }),
       cache: "no-store"
     });
-    const token = await response.json();
-    if (!response.ok || !token.access_token || !token.refresh_token) return fail("oauth_failed");
+    const tokenBody = await response.json().catch(() => null);
+    const token = tokenBody && typeof tokenBody === "object" ? tokenBody : {};
+    if (!response.ok || !token.access_token || !token.refresh_token) {
+      console.error("Google Health token exchange rejected", {
+        status: response.status,
+        error: typeof token.error === "string" ? token.error : "invalid_token_response",
+        hasAccessToken: Boolean(token.access_token),
+        hasRefreshToken: Boolean(token.refresh_token)
+      });
+      return fail("oauth_failed");
+    }
 
     const sessionId = randomBytes(32).toString("hex");
     const session = {
@@ -60,7 +69,11 @@ module.exports = async (req, res) => {
     res.setHeader("Cache-Control", "no-store");
     res.redirect(303, "/?googleHealth=connected#more");
   } catch (error) {
-    console.error("Google Health OAuth callback failed", error.message);
+    console.error("Google Health OAuth callback failed", {
+      message: error.message,
+      status: error.status || null,
+      googleReason: error.googleReason || null
+    });
     fail(error.googleReason === "ACCOUNT_NOT_LINKED" ? "google_account_not_linked" : "oauth_failed");
   }
 };
