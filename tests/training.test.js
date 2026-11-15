@@ -14,7 +14,7 @@ function loadApp() {
     getElementById() { return root; },
     querySelectorAll() { return []; },
     querySelector() { return null; },
-    createElement() { return { click() {}, remove() {} }; }
+    createElement() { return { click() { context.downloadedName=this.download; }, remove() {} }; }
   };
   const context = {
     document,
@@ -115,28 +115,32 @@ test("combined chart renders aligned weights, set bars, shared dates, and SVG ov
   assert.match(html, /22,5 kg/);
 });
 
-test("ChatGPT share attaches a trainer prompt and Google Health data while plain JSON stays unchanged", async () => {
+test("ChatGPT share keeps the full history in a JSON file and copies only a short prompt on fallback", async () => {
   const { api, context } = loadApp();
   const workout=api.getWorkouts()[0];
   workout.trainingVariant="short";
   workout.googleHealth={provider:"google-health",displayName:"Workout",exerciseType:"WORKOUT",
     elapsedSeconds:3600,activeDurationSeconds:3300,activeZoneMinutes:24,minutesByZone:{fatBurn:18,cardio:3,peak:0},
     weightedMinutesByZone:{fatBurn:18,cardio:6,peak:0},telemetryAvailable:true};
+  api.getWorkouts().push({id:"after-october",source:"google-health",date:"15.11.2026",planId:"google-health",
+    planName:"Google Health · Workout",items:[],googleHealth:{...workout.googleHealth,activeZoneMinutes:12}});
   assert.match(api.more(), /data-action="share-json"/);
   assert.match(api.more(), /data-action="export-json"/);
   assert.match(api.more(), /id="coach-prompt"/);
   assert.match(api.getCoachPrompt(), /letzten vier Wochen/);
   await api.shareJSON();
-  assert.equal(context.sharedData.files[0].type, "application/json");
-  assert.match(context.sharedData.files[0].name, /^fitness-trainingsdaten-.*\.json$/);
-  assert.match(context.sharedData.text, /analysisPrompt/);
+  assert.equal(context.sharedData.files[0].type,"application/json");
+  assert.match(context.sharedData.files[0].name,/^fitness-chatgpt-trainingsdaten-.*\.json$/);
+  assert.match(context.sharedData.text,/Download-Ordner|angehängte JSON-Datei|vollständige JSON-Datei/);
   const shared=JSON.parse(context.sharedData.files[0].content);
   assert.equal(shared.schemaVersion,1);
   assert.match(shared.analysisPrompt,/Zonenminuten/);
-  assert.equal(shared.workouts[0].trainingVariant,"short");
-  assert.equal(shared.workouts[0].googleHealth.activeZoneMinutes,24);
-  assert.match(api.chatGPTShareText(),/WORKOUTSDATEN|TRAININGSDATEN/);
-  assert.match(api.chatGPTShareText(),/24/);
+  const linked=shared.workouts.find(entry=>entry.trainingVariant==="short");
+  assert.ok(linked);
+  assert.equal(linked.googleHealth.activeZoneMinutes,24);
+  assert.ok(shared.workouts.some(entry=>entry.date==="15.11.2026"));
+  assert.doesNotMatch(api.chatGPTShareText(),/TRAININGSDATEN \(JSON\):/);
+  assert.ok(api.chatGPTShareText().length<3000);
   api.exportJSON();
   assert.equal(JSON.parse(context.exportedText).schemaVersion,1);
   assert.equal(JSON.parse(context.exportedText).analysisPrompt,undefined);
@@ -144,9 +148,13 @@ test("ChatGPT share attaches a trainer prompt and Google Health data while plain
   context.localStorage.setItem("fitness.coachPrompt",JSON.stringify("Mein eigener Trainer-Prompt"));
   assert.equal(api.chatGPTExportPayload().analysisPrompt,"Mein eigener Trainer-Prompt");
   assert.match(api.chatGPTShareText(),/Mein eigener Trainer-Prompt/);
-  context.navigator.canShare = () => false;
+  context.navigator.canShare=()=>false;
+  context.navigator.clipboard={async writeText(value){context.copiedText=value;}};
   await api.shareJSON();
-  assert.match(context.sharedData.text,/Mein eigener Trainer-Prompt/);
+  assert.match(context.copiedText,/Mein eigener Trainer-Prompt/);
+  assert.doesNotMatch(context.copiedText,/15\.11\.2026/);
+  assert.match(context.downloadedName,/^fitness-chatgpt-trainingsdaten-.*\.json$/);
+  assert.ok(JSON.parse(context.exportedText).workouts.some(entry=>entry.date==="15.11.2026"));
 });
 
 test("history filters show app sessions, imported workouts, and linked health data", () => {

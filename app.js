@@ -376,7 +376,7 @@ function more(){
  out+='</div></div>';});out+='</section><section class="card management-card"><div class="section-head"><div><div class="eyebrow">ZIELE</div><h3>Deine Ziele</h3></div><button class="primary small-primary" data-action="new-goal">+ Neues Ziel</button></div>';
  goals.forEach(g=>{out+='<div class="manage-row"><div class="manage-main"><b>'+esc(g.name)+'</b><span class="meta">'+esc(g.current||"Stand offen")+(g.next?" · als Nächstes "+esc(g.next):"")+'</span></div><div class="manage-actions"><span class="badge '+(g.status==="active"?"active":"")+'">'+(g.status==="active"?"AKTIV":(g.status==="completed"?"ERREICHT":"INAKTIV"))+'</span><button class="mini-button" data-action="edit-goal" data-id="'+esc(g.id)+'">Bearbeiten</button>';
  if(g.status!=="active"&&g.status!=="completed")out+='<button class="mini-button" data-action="activate-goal" data-id="'+esc(g.id)+'">Aktivieren</button>';if(g.status==="active")out+='<button class="mini-button" data-action="complete-goal" data-id="'+esc(g.id)+'">Erreicht ✓</button>';out+='</div></div>';});
- out+='</section><section class="card export-card"><div class="eyebrow">DATEN & CHATGPT</div><h3>Trainingsdaten exportieren</h3><p class="meta">Teile einen Analyseauftrag mit deinen Trainingsdaten als Text über das Android-Teilen-Menü oder lade die vollständige JSON-Datei herunter.</p><button class="primary full-width" data-action="share-json">↗ Mit ChatGPT teilen</button><button class="secondary full-width" data-action="export-json">↓ Trainingsdaten als JSON herunterladen</button><details class="coach-prompt-settings"><summary>Trainer-Prompt ansehen und anpassen</summary><p class="meta">Der Prompt wird nur in diesem Browser gespeichert und beim ChatGPT-Export mitgegeben. Der normale JSON-Datenexport bleibt unverändert.</p><label class="field-label" for="coach-prompt">Anweisung an ChatGPT<textarea class="input coach-prompt-input" id="coach-prompt" rows="9">'+esc(getCoachPrompt())+'</textarea></label><div class="coach-prompt-actions"><button class="mini-button" data-action="save-coach-prompt">Prompt speichern</button><button class="mini-button" data-action="reset-coach-prompt">Standard wiederherstellen</button></div></details><div class="note">Beim Teilen wird die JSON-Datei zusammen mit dem Analyseauftrag an die ausgewählte App übergeben. Wenn das Teilen einer Datei nicht unterstützt wird, nutzt die App den Text-Export. Nichts wird automatisch versendet.</div></section><section class="card info"><b>Datenschutz</b><div class="note" style="margin-top:6px">Trainingsplan, Gewichte und Historie bleiben im Browser. OAuth-Schlüssel werden nur serverseitig verwendet. Der verbundene Google-Zugriff kann hier jederzeit getrennt werden.</div></section></div>';return out;
+ out+='</section><section class="card export-card"><div class="eyebrow">DATEN & CHATGPT</div><h3>Trainingsdaten exportieren</h3><p class="meta">Teile einen Analyseauftrag mit deinen Trainingsdaten als Text über das Android-Teilen-Menü oder lade die vollständige JSON-Datei herunter.</p><button class="primary full-width" data-action="share-json">↗ Mit ChatGPT teilen</button><button class="secondary full-width" data-action="export-json">↓ Trainingsdaten als JSON herunterladen</button><details class="coach-prompt-settings"><summary>Trainer-Prompt ansehen und anpassen</summary><p class="meta">Der Prompt wird nur in diesem Browser gespeichert und beim ChatGPT-Export mitgegeben. Der normale JSON-Datenexport bleibt unverändert.</p><label class="field-label" for="coach-prompt">Anweisung an ChatGPT<textarea class="input coach-prompt-input" id="coach-prompt" rows="9">'+esc(getCoachPrompt())+'</textarea></label><div class="coach-prompt-actions"><button class="mini-button" data-action="save-coach-prompt">Prompt speichern</button><button class="mini-button" data-action="reset-coach-prompt">Standard wiederherstellen</button></div></details><div class="note">Die vollständige JSON-Datei wird geteilt. Wenn dein Gerät keine Datei teilen kann, lädt die App die Datei herunter und kopiert nur den kurzen Prompt. Nichts wird automatisch versendet.</div></section><section class="card info"><b>Datenschutz</b><div class="note" style="margin-top:6px">Trainingsplan, Gewichte und Historie bleiben im Browser. OAuth-Schlüssel werden nur serverseitig verwendet. Der verbundene Google-Zugriff kann hier jederzeit getrennt werden.</div></section></div>';return out;
 }
 
 function refreshGoogleHealthStatus(){const el=document.getElementById("google-health-status");if(!el)return;fetch("/api/google/session",{cache:"no-store"}).then(response=>response.json().then(body=>({ok:response.ok,body}))).then(({ok,body})=>{const connect=document.querySelector("[data-google-connect]"),disconnect=document.querySelector("[data-google-disconnect]");if(!el.isConnected)return;if(ok&&body.connected){el.textContent="Verbunden · Lesezugriff aktiv";if(connect)connect.hidden=true;if(disconnect)disconnect.hidden=false;}else if(ok){el.textContent="Noch nicht verbunden";if(connect)connect.hidden=false;if(disconnect)disconnect.hidden=true;}else{el.textContent="Google Health ist noch nicht eingerichtet.";if(connect)connect.hidden=true;if(disconnect)disconnect.hidden=true;}}).catch(()=>{if(el.isConnected)el.textContent="Verbindungsstatus derzeit nicht verfügbar."})}
@@ -436,32 +436,29 @@ function chatGPTExportPayload(){return Object.assign({},exportPayload(),{analysi
 function saveCoachPrompt(){const input=document.getElementById("coach-prompt"),value=input&&String(input.value||"").trim();if(!value){alert("Der Prompt darf nicht leer sein.");return;}if(put("fitness.coachPrompt",value))alert("Dein ChatGPT-Trainer-Prompt wurde lokal gespeichert.");}
 function resetCoachPrompt(){localStorage.removeItem("fitness.coachPrompt");render();alert("Der Standard-Prompt wurde wiederhergestellt.");}
 function chatGPTShareText(){
- const payload=exportPayload();
- const compact={schemaVersion:payload.schemaVersion,exportedAt:payload.exportedAt,application:payload.application,activePlanId:payload.activePlanId,activeGoalId:payload.activeGoalId,analysisPrompt:getCoachPrompt(),plans:payload.plans,goals:payload.goals,workouts:payload.workouts.map(w=>({date:w.date,source:w.source,planName:w.planName,trainingVariant:w.trainingVariant,startedAt:w.startedAt,completedAt:w.completedAt,notes:w.notes,googleHealth:w.googleHealth,items:w.items.map(it=>({exerciseId:it.exerciseId,name:it.name,weight:it.weight,reps:it.reps,done:it.done,skipped:it.skipped,kind:it.kind,minReps:it.minReps,maxReps:it.maxReps,isReplacement:it.isReplacement,plannedExerciseName:it.plannedExerciseName||undefined}))}))};
- return getCoachPrompt()+"\n\nBitte analysiere die folgenden Trainingsdaten gemäß diesem Auftrag. Nutze das Exportdatum als Bezugspunkt und berücksichtige Google-Health-Daten sowie Trainingsvarianten.\n\nTRAININGSDATEN (JSON):\n"+JSON.stringify(compact);
+ return getCoachPrompt()+"\n\nBitte füge die vollständige ChatGPT-JSON-Datei aus deinem Download-Ordner an diese Unterhaltung an. Die Datei enthält Trainingsdaten und Prompt. Analysiere den Verlauf mit Fokus auf die letzten vier Wochen.";
 }
-async function shareChatGPT(){
- const text=chatGPTShareText();
- if(navigator.share){
-  try{await navigator.share({title:"Trainingsdaten mit ChatGPT teilen",text:text});return;}
-  catch(error){if(error&&error.name==="AbortError")return;console.warn("Textfreigabe wurde nicht abgeschlossen.",error);}
- }
+async function fallbackChatGPTExport(){
+ exportChatGPTJSON();
  if(navigator.clipboard&&typeof navigator.clipboard.writeText==="function"){
-  try{await navigator.clipboard.writeText(text);alert("Analyseauftrag und Trainingsdaten wurden kopiert. Öffne ChatGPT, füge den Text ein und sende ihn.");return;}
-  catch(error){console.warn("Trainingsdaten konnten nicht in die Zwischenablage kopiert werden.",error);}
+  try{await navigator.clipboard.writeText(chatGPTShareText());alert("Die vollständige Trainingsdatei wurde heruntergeladen. Der kurze Analyse-Prompt wurde kopiert. Öffne ChatGPT, füge die JSON-Datei an und kopiere den Prompt in die Nachricht.");return;}
+  catch(error){console.warn("Der Prompt konnte nicht kopiert werden.",error);}
  }
- alert("Textfreigabe und Kopieren sind hier nicht verfügbar. Die JSON-Datei wird stattdessen heruntergeladen.");exportJSON();
+ alert("Die vollständige Trainingsdatei wurde heruntergeladen. Öffne ChatGPT, füge die JSON-Datei an und kopiere den Prompt aus Mehr → Daten & ChatGPT.");
 }
-function exportJSON(){
- const blob=new Blob([JSON.stringify(exportPayload(),null,2)],{type:"application/json;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=exportFilename();document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+function downloadJSONPayload(payload,filename){
+ const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
+function exportJSON(){downloadJSONPayload(exportPayload(),exportFilename());}
+function chatGPTExportFilename(){return "fitness-chatgpt-trainingsdaten-"+new Date().toISOString().slice(0,10)+".json"}
+function exportChatGPTJSON(){downloadJSONPayload(chatGPTExportPayload(),chatGPTExportFilename());}
 async function shareJSON(){
- if(typeof File==="undefined"||!navigator.share||!navigator.canShare){await shareChatGPT();return;}
- const file=new File([JSON.stringify(chatGPTExportPayload(),null,2)],exportFilename(),{type:"application/json"});
+ if(typeof File==="undefined"||!navigator.share||!navigator.canShare){await fallbackChatGPTExport();return;}
+ const filename=chatGPTExportFilename(),file=new File([JSON.stringify(chatGPTExportPayload(),null,2)],filename,{type:"application/json"});
  let canShareFile=false;try{canShareFile=navigator.canShare({files:[file]})}catch(error){console.warn("Der JSON-Export kann nicht über das Teilen-Menü angeboten werden.",error)}
- if(!canShareFile){await shareChatGPT();return;}
- try{await navigator.share({files:[file],title:"Trainingsdaten mit ChatGPT analysieren",text:"Bitte übernimm die Trainerrolle und analysiere die angehängte JSON-Datei nach dem Feld analysisPrompt. Der Fokus liegt auf den letzten vier Wochen; beziehe Trainingsvarianten und Google-Health-Zonenminuten ein."})}
- catch(error){if(error&&error.name==="AbortError")return;console.warn("Der JSON-Export konnte nicht geteilt werden.",error);await shareChatGPT();}
+ if(!canShareFile){await fallbackChatGPTExport();return;}
+ try{await navigator.share({files:[file],title:"Trainingsdaten mit ChatGPT analysieren",text:chatGPTShareText()})}
+ catch(error){if(error&&error.name==="AbortError")return;console.warn("Der JSON-Export konnte nicht geteilt werden.",error);await fallbackChatGPTExport();}
 }
 function handleAction(b){
  const a=b.dataset.action,id=b.dataset.id,i=Number(b.dataset.index);
@@ -486,5 +483,5 @@ if(!location.hash)location.hash="home";
 render();
 const googleHealthResult=new URLSearchParams(location.search).get("googleHealth");if(googleHealthResult){history.replaceState(null,"",location.pathname+location.hash);setTimeout(()=>{if(googleHealthResult==="connected")alert("Google Health ist verbunden. Nach dem nächsten Training kannst du das Pixel-Watch-Workout zuordnen.");else if(googleHealthResult==="google_account_not_linked")alert("Dieses Google-Konto ist noch nicht mit einem Google-Health-Profil verknüpft. Öffne zuerst die Google-Health-App und melde dich mit demselben Konto an.");else if(googleHealthResult==="oauth_cancelled")alert("Die Google-Anmeldung wurde abgebrochen oder ist abgelaufen. Starte die Verbindung bitte erneut.");else alert("Google Health konnte nicht verbunden werden. Prüfe im Vercel-Dashboard die Runtime Logs für /api/google/callback.");},150);}
 if(draft&&draft.restTimerEndAt){restTimerInterval=setInterval(updateRestTimer,1000);updateRestTimer();}
-if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js?v=25",{scope:"./"}).catch(error=>console.warn("Service Worker konnte nicht registriert werden.",error));
+if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js?v=26",{scope:"./"}).catch(error=>console.warn("Service Worker konnte nicht registriert werden.",error));
 
