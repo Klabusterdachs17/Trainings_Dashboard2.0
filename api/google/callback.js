@@ -10,8 +10,8 @@ module.exports = async (req, res) => {
   const jar = cookies(req);
   const query = req.query || {};
   const state = String(query.state || "");
-  const expected = String(jar.__Host-health_oauth_state || "");
-  const verifier = String(jar.__Host-health_oauth_verifier || "");
+  const expected = String(jar["__Host-health_oauth_state"] || "");
+  const verifier = String(jar["__Host-health_oauth_verifier"] || "");
   const clear = [
     `__Host-health_oauth_state=; ${cookieOptions(0)}`,
     `__Host-health_oauth_verifier=; ${cookieOptions(0)}`
