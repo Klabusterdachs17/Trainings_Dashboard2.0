@@ -30,20 +30,22 @@ module.exports = async (req, res) => {
     const points = [];
     let pageToken = "";
     let truncated = false;
-    for (let page = 0; page < 10; page++) {
+    for (let page = 0; page < 20; page++) {
       const result = await healthFetch(session, "users/me/dataTypes/exercise/dataPoints:reconcile", {
         filter,
         dataSourceFamily: "users/me/dataSourceFamilies/google-wearables",
         pageSize: "25",
         ...(pageToken ? { pageToken } : {})
       });
-      points.push(...(result.dataPoints || []));
+      points.push(...(result.dataPoints || []).filter((point) => point.exercise && point.exercise.exerciseType === "WORKOUT"));
       pageToken = result.nextPageToken || "";
       if (!pageToken) break;
-      if (page === 9 || points.length >= 250) {
+      if (points.length >= 250) {
+        points.length = 250;
         truncated = true;
         break;
       }
+      if (page === 19) truncated = true;
     }
 
     const candidates = points.map((point) => {
