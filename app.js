@@ -435,5 +435,5 @@ if(!location.hash)location.hash="home";
 render();
 const googleHealthResult=new URLSearchParams(location.search).get("googleHealth");if(googleHealthResult){history.replaceState(null,"",location.pathname+location.hash);setTimeout(()=>{if(googleHealthResult==="connected")alert("Google Health ist verbunden. Nach dem nächsten Training kannst du das Pixel-Watch-Workout zuordnen.");else if(googleHealthResult==="google_account_not_linked")alert("Dieses Google-Konto ist noch nicht mit einem Google-Health-Profil verknüpft. Öffne zuerst die Google-Health-App und melde dich mit demselben Konto an.");else if(googleHealthResult==="oauth_cancelled")alert("Die Google-Anmeldung wurde abgebrochen oder ist abgelaufen. Starte die Verbindung bitte erneut.");else alert("Google Health konnte nicht verbunden werden. Prüfe im Vercel-Dashboard die Runtime Logs für /api/google/callback.");},150);}
 if(draft&&draft.restTimerEndAt){restTimerInterval=setInterval(updateRestTimer,1000);updateRestTimer();}
-if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js?v=21",{scope:"./"}).catch(error=>console.warn("Service Worker konnte nicht registriert werden.",error));
+if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js?v=22",{scope:"./"}).catch(error=>console.warn("Service Worker konnte nicht registriert werden.",error));
 
