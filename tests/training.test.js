@@ -50,7 +50,7 @@ function loadApp() {
   vm.runInContext(source + `\nglobalThis.testApi = {
     recommendedTrainingVariant, todaySetCount, activePlan, freshDraft, trainingChoice,
     startTraining, chooseTraining, finishWorkout, normalizeWorkout, historyView, setHistoryFilter, progressCombinedChart, progress, setProgressMode, setProgressRange,
-    exportJSON, shareJSON, more, getDraft: () => draft, getWorkouts: () => workouts, getScreen: () => document.getElementById("app").innerHTML,
+    exportJSON, shareJSON, chatGPTShareText, chatGPTExportPayload, getCoachPrompt, more, getDraft: () => draft, getWorkouts: () => workouts, getScreen: () => document.getElementById("app").innerHTML,
     renderChoice: () => trainingChoice(),
     getHistoryFilter: () => historyFilter,
     getProgressMode: () => progressMode, getProgressRange: () => progressRange
@@ -115,19 +115,38 @@ test("combined chart renders aligned weights, set bars, shared dates, and SVG ov
   assert.match(html, /22,5 kg/);
 });
 
-test("ChatGPT share button offers the JSON file and preserves download fallback", async () => {
+test("ChatGPT share attaches a trainer prompt and Google Health data while plain JSON stays unchanged", async () => {
   const { api, context } = loadApp();
+  const workout=api.getWorkouts()[0];
+  workout.trainingVariant="short";
+  workout.googleHealth={provider:"google-health",displayName:"Workout",exerciseType:"WORKOUT",
+    elapsedSeconds:3600,activeDurationSeconds:3300,activeZoneMinutes:24,minutesByZone:{fatBurn:18,cardio:3,peak:0},
+    weightedMinutesByZone:{fatBurn:18,cardio:6,peak:0},telemetryAvailable:true};
   assert.match(api.more(), /data-action="share-json"/);
   assert.match(api.more(), /data-action="export-json"/);
+  assert.match(api.more(), /id="coach-prompt"/);
+  assert.match(api.getCoachPrompt(), /letzten vier Wochen/);
   await api.shareJSON();
   assert.equal(context.sharedData.files[0].type, "application/json");
   assert.match(context.sharedData.files[0].name, /^fitness-trainingsdaten-.*\.json$/);
-  assert.match(context.sharedData.text, /ChatGPT/);
-  assert.equal(JSON.parse(context.sharedData.files[0].content).schemaVersion, 1);
+  assert.match(context.sharedData.text, /analysisPrompt/);
+  const shared=JSON.parse(context.sharedData.files[0].content);
+  assert.equal(shared.schemaVersion,1);
+  assert.match(shared.analysisPrompt,/Zonenminuten/);
+  assert.equal(shared.workouts[0].trainingVariant,"short");
+  assert.equal(shared.workouts[0].googleHealth.activeZoneMinutes,24);
+  assert.match(api.chatGPTShareText(),/WORKOUTSDATEN|TRAININGSDATEN/);
+  assert.match(api.chatGPTShareText(),/24/);
+  api.exportJSON();
+  assert.equal(JSON.parse(context.exportedText).schemaVersion,1);
+  assert.equal(JSON.parse(context.exportedText).analysisPrompt,undefined);
 
+  context.localStorage.setItem("fitness.coachPrompt",JSON.stringify("Mein eigener Trainer-Prompt"));
+  assert.equal(api.chatGPTExportPayload().analysisPrompt,"Mein eigener Trainer-Prompt");
+  assert.match(api.chatGPTShareText(),/Mein eigener Trainer-Prompt/);
   context.navigator.canShare = () => false;
   await api.shareJSON();
-  assert.equal(JSON.parse(context.exportedText).schemaVersion, 1);
+  assert.match(context.sharedData.text,/Mein eigener Trainer-Prompt/);
 });
 
 test("history filters show app sessions, imported workouts, and linked health data", () => {
@@ -173,6 +192,7 @@ test("progress page preserves strength view and summarizes Google Health load by
     elapsedSeconds: 3600, activeDurationSeconds: 3300, activeZoneMinutes: 24,
     minutesByZone: { fatBurn: 18, cardio: 3, peak: 0 },
     weightedMinutesByZone: { fatBurn: 18, cardio: 6, peak: 0 }, telemetryAvailable: true };
+  existing.trainingVariant = "short";
   existing.googleHealth = health;
   api.getWorkouts().push({ id: "google-progress-only", source: "google-health", date: today,
     planId: "google-health", planName: "Google Health · Workout", items: [],
@@ -192,6 +212,8 @@ test("progress page preserves strength view and summarizes Google Health load by
   assert.match(html, /Zonenminuten pro Training/);
   assert.match(html, /Trainingsdauer/);
   assert.match(html, /Nicht aufgeschlüsselt/);
+  assert.match(html,/Verkürzt/);
+  assert.match(html,/class="load-bar-variant"/);
   assert.match(html, /Workout ohne Zonendetails/);
   assert.equal((html.match(/class="load-bar-item"/g)||[]).length, 4);
   api.setProgressRange("4");
