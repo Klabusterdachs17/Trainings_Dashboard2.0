@@ -25,9 +25,12 @@ function loadApp() {
     },
     location: {
       _hash: "",
+      search: "",
+      pathname: "/",
       get hash() { return this._hash; },
       set hash(value) { this._hash = value.startsWith("#") ? value : "#" + value; }
     },
+    URLSearchParams,
     window: { addEventListener() {} },
     navigator: {
       serviceWorker: { register() { return Promise.resolve(); } },
@@ -46,9 +49,10 @@ function loadApp() {
   const source = fs.readFileSync(path.join(__dirname, "..", "app.js"), "utf8");
   vm.runInContext(source + `\nglobalThis.testApi = {
     recommendedTrainingVariant, todaySetCount, activePlan, freshDraft, trainingChoice,
-    startTraining, chooseTraining, finishWorkout, normalizeWorkout, historyView, progressCombinedChart,
+    startTraining, chooseTraining, finishWorkout, normalizeWorkout, historyView, setHistoryFilter, progressCombinedChart,
     exportJSON, shareJSON, more, getDraft: () => draft, getWorkouts: () => workouts, getScreen: () => document.getElementById("app").innerHTML,
-    renderChoice: () => trainingChoice()
+    renderChoice: () => trainingChoice(),
+    getHistoryFilter: () => historyFilter
   };`, context);
   return { api: context.testApi, store, context };
 }
@@ -123,4 +127,38 @@ test("ChatGPT share button offers the JSON file and preserves download fallback"
   context.navigator.canShare = () => false;
   await api.shareJSON();
   assert.equal(JSON.parse(context.exportedText).schemaVersion, 1);
+});
+
+test("history filters show app sessions, imported workouts, and linked health data", () => {
+  const { api } = loadApp();
+  const initial = api.getWorkouts().length;
+  const linkedWorkout = api.getWorkouts()[0];
+  const healthData = { provider: "google-health", displayName: "Workout", elapsedSeconds: 3600,
+    activeDurationSeconds: 3300, activeZoneMinutes: 24, minutesByZone: {},
+    weightedMinutesByZone: {}, telemetryAvailable: false };
+  linkedWorkout.googleHealth = healthData;
+  const linkedBefore = api.getWorkouts().filter(workout => workout.googleHealth).length;
+  api.getWorkouts().push({
+    id: "google-only", source: "google-health", date: "15.11.2026",
+    planName: "Google Health · Workout", planId: "google-health", items: [],
+    googleHealth: healthData
+  });
+  let html=api.historyView();
+  assert.match(html,new RegExp("Alle <span>"+(initial+1)+"<\\/span>"));
+  assert.match(html,new RegExp("App-Trainings <span>"+initial+"<\\/span>"));
+  assert.match(html,new RegExp("Google Health <span>"+(linkedBefore+1)+"<\\/span>"));
+  assert.match(html,/Google Health importiert/);
+  assert.match(html,/Gesamtdauer/);
+  assert.match(html,/Zonenminuten/);
+  api.setHistoryFilter("app");
+  assert.equal(api.getHistoryFilter(),"app");
+  html=api.historyView();
+  assert.equal((html.match(/class="card history-card"/g)||[]).length,initial);
+  assert.doesNotMatch(html,/Google Health importiert/);
+  assert.match(html,/App \+ Google Health/);
+  api.setHistoryFilter("google");
+  html=api.historyView();
+  assert.equal((html.match(/class="card history-card"/g)||[]).length,linkedBefore+1);
+  assert.match(html,/App \+ Google Health/);
+  assert.match(html,/Google Health importiert/);
 });
